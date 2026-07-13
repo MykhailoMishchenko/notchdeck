@@ -10,7 +10,10 @@ final class NotchWindowController {
 
     private let window: NotchWindow
     private let expandedSize = CGSize(width: 440, height: 160)
-    private let hoverSlop: CGFloat = 4
+    /// Hover trigger margins around the collapsed notch — bigger than the shape so expansion starts "на подлёте".
+    private let collapsedSlopX: CGFloat = 14
+    private let collapsedSlopY: CGFloat = 8
+    private let expandedSlop: CGFloat = 4
 
     init(screen: NSScreen) {
         self.screen = screen
@@ -36,7 +39,10 @@ final class NotchWindowController {
             state: state,
             hasNotch: hasNotch,
             geometry: geometry,
-            expandedSize: expandedSize
+            expandedSize: expandedSize,
+            collapsedSlopX: collapsedSlopX,
+            collapsedSlopY: collapsedSlopY,
+            expandedSlop: expandedSlop
         )
         let hosting = PassThroughHostingView(rootView: root)
         hosting.interactiveRect = { [weak self] in self?.interactiveRectInView() ?? .zero }
@@ -56,10 +62,10 @@ final class NotchWindowController {
         let height: CGFloat
         if state.expanded {
             width = expandedSize.width
-            height = expandedSize.height + hoverSlop
+            height = expandedSize.height + expandedSlop
         } else {
-            width = geometry.notchWidth + geometry.topCornerRadius * 2 + hoverSlop * 2
-            height = geometry.notchHeight + hoverSlop
+            width = geometry.notchWidth + geometry.topCornerRadius * 2 + collapsedSlopX * 2
+            height = geometry.notchHeight + collapsedSlopY
         }
         return CGRect(x: (window.frame.width - width) / 2, y: 0, width: width, height: height)
     }

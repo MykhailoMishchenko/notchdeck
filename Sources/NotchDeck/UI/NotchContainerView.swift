@@ -14,20 +14,16 @@ final class NotchState: ObservableObject {
 
     // inputs {hovering}, does {expands immediately on hover-in; on hover-out collapses after a grace delay, but only if the cursor really left the zone}, returns {}
     func setHovering(_ hovering: Bool) {
-        Log.info("hover event: \(hovering) cursorInZone=\(isCursorInZone()) expanded=\(expanded)")
         collapseWork?.cancel()
         if hovering {
             expanded = true
         } else {
             let work = DispatchWorkItem { [weak self] in
-                guard let self else { return }
-                let inZone = self.isCursorInZone()
-                Log.info("collapse check: cursorInZone=\(inZone)")
-                guard !inZone else { return }
+                guard let self, !self.isCursorInZone() else { return }
                 self.expanded = false
             }
             collapseWork = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: work)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.10, execute: work)
         }
     }
 }
@@ -38,12 +34,18 @@ struct NotchContainerView: View {
     let hasNotch: Bool
     let geometry: NotchGeometry
     let expandedSize: CGSize
+    let collapsedSlopX: CGFloat
+    let collapsedSlopY: CGFloat
+    let expandedSlop: CGFloat
 
     private var collapsedWidth: CGFloat { geometry.notchWidth + geometry.topCornerRadius * 2 }
     private var collapsedHeight: CGFloat { geometry.notchHeight }
     private var currentWidth: CGFloat { state.expanded ? expandedSize.width : collapsedWidth }
     private var currentHeight: CGFloat { state.expanded ? expandedSize.height : collapsedHeight }
     private var bottomRadius: CGFloat { state.expanded ? 24 : geometry.bottomCornerRadius }
+    /// Hover zone is larger than the visible shape so expansion triggers on approach.
+    private var hoverWidth: CGFloat { state.expanded ? expandedSize.width : collapsedWidth + collapsedSlopX * 2 }
+    private var hoverHeight: CGFloat { state.expanded ? expandedSize.height + expandedSlop : collapsedHeight + collapsedSlopY }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -63,9 +65,13 @@ struct NotchContainerView: View {
             }
             .frame(width: currentWidth, height: currentHeight)
             .clipShape(NotchShape(topCornerRadius: geometry.topCornerRadius, bottomCornerRadius: bottomRadius))
+            .frame(width: hoverWidth, height: hoverHeight, alignment: .top)
             .contentShape(Rectangle())
             .onHover { state.setHovering($0) }
-            .animation(.spring(response: 0.38, dampingFraction: 0.78), value: state.expanded)
+            .animation(
+                .spring(response: state.expanded ? 0.38 : 0.30, dampingFraction: 0.78),
+                value: state.expanded
+            )
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .center)
