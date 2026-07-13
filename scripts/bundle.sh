@@ -5,6 +5,7 @@ set -euo pipefail
 CONFIG="${1:-release}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/.build/NotchDeck.app"
+VERSION="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 
 swift build -c "$CONFIG" --package-path "$ROOT"
 
@@ -12,7 +13,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp "$ROOT/.build/$CONFIG/NotchDeck" "$APP/Contents/MacOS/NotchDeck"
 
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -26,7 +27,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>$VERSION</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
