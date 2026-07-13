@@ -9,7 +9,7 @@ final class NotchWindowController {
     let state = NotchState()
 
     private let window: NotchWindow
-    private let expandedSize = CGSize(width: 640, height: 240)
+    private let expandedSize = CGSize(width: 440, height: 160)
     private let hoverSlop: CGFloat = 4
 
     init(screen: NSScreen) {
@@ -39,17 +39,19 @@ final class NotchWindowController {
             expandedSize: expandedSize
         )
         let hosting = PassThroughHostingView(rootView: root)
-        hosting.interactiveRect = { [weak self] in self?.interactiveRect() ?? .zero }
+        hosting.interactiveRect = { [weak self] in self?.interactiveRectInView() ?? .zero }
+        state.isCursorInZone = { [weak self] in
+            guard let self else { return false }
+            return self.interactiveRectInScreen().contains(NSEvent.mouseLocation)
+        }
         window.contentView = hosting
         window.setFrame(frame, display: true)
         window.orderFrontRegardless()
         Log.info("window up: screen=\(screen.localizedName) mode=\(hasNotch ? "notch" : "pill") geometry=\(Int(geometry.notchWidth))x\(Int(geometry.notchHeight))")
     }
 
-    // inputs {}, does {returns the currently interactive zone in view coordinates measured from the TOP edge (converted by hitTest caller)}, returns {rect}
-    private func interactiveRect() -> CGRect {
-        guard let view = window.contentView else { return .zero }
-        let bounds = view.bounds
+    // inputs {}, does {interactive zone as (x from window left, y from window TOP, w, h) — single source for both converters below}, returns {rect}
+    private func interactiveZoneTopBased() -> CGRect {
         let width: CGFloat
         let height: CGFloat
         if state.expanded {
@@ -59,10 +61,26 @@ final class NotchWindowController {
             width = geometry.notchWidth + geometry.topCornerRadius * 2 + hoverSlop * 2
             height = geometry.notchHeight + hoverSlop
         }
-        let x = bounds.midX - width / 2
-        // Hosting view coords: NSHostingView is flipped (origin top-left), so top zone starts at y = 0.
-        let y: CGFloat = view.isFlipped ? 0 : bounds.height - height
-        return CGRect(x: x, y: y, width: width, height: height)
+        return CGRect(x: (window.frame.width - width) / 2, y: 0, width: width, height: height)
+    }
+
+    // inputs {}, does {zone in contentView coordinates for hitTest}, returns {rect}
+    private func interactiveRectInView() -> CGRect {
+        guard let view = window.contentView else { return .zero }
+        let zone = interactiveZoneTopBased()
+        let y: CGFloat = view.isFlipped ? zone.minY : view.bounds.height - zone.maxY
+        return CGRect(x: zone.minX, y: y, width: zone.width, height: zone.height)
+    }
+
+    // inputs {}, does {zone in global screen coordinates (bottom-up) for cursor checks}, returns {rect}
+    private func interactiveRectInScreen() -> CGRect {
+        let zone = interactiveZoneTopBased()
+        return CGRect(
+            x: window.frame.minX + zone.minX,
+            y: window.frame.maxY - zone.maxY,
+            width: zone.width,
+            height: zone.height
+        )
     }
 
     // inputs {}, does {closes and releases the window (screen disconnected)}, returns {}
