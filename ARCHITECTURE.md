@@ -1,43 +1,45 @@
 # NotchDeck — Architecture
 
-Модульная notch-платформа для macOS. Этот файл — источник истины по архитектурным решениям; сверяться с ним при интеграции внешних модулей (fan-control и др.).
+A modular notch platform for macOS. This file is the source of truth for architectural decisions; consult it when integrating external modules (fan control and others).
 
-## Слои
+## Layers
 
 ```
 ┌─────────────────────────────────────────────┐
 │  App (main.swift, AppDelegate)              │  lifecycle, per-screen windows
 ├─────────────────────────────────────────────┤
-│  Notch Layer (NotchWindow, Controller,      │  окно, геометрия, hover,
-│  NotchGeometry)                             │  expand/collapse, pill-fallback
+│  Notch Layer (NotchWindow, Controller,      │  window, geometry, hover,
+│  NotchGeometry)                             │  expand/collapse, pill fallback
 ├─────────────────────────────────────────────┤
-│  Widget Platform (Этап 2)                   │  NotchWidget protocol, registry,
+│  Widget Platform (Stage 2)                  │  NotchWidget protocol, registry,
 │                                             │  push/poll scheduling, live-lock
 ├─────────────────────────────────────────────┤
-│  Widgets (Этап 3)                           │  media / files shelf / calendar,
-│                                             │  позже: fan-control (XPC)
+│  Widgets (Stage 3)                          │  media / files shelf / calendar,
+│                                             │  later: fan control (XPC)
 └─────────────────────────────────────────────┘
 ```
 
-Правило зависимостей: слои знают только о слое ниже. Виджеты не знают об окне; ядро не знает о конкретных виджетах.
+Dependency rule: each layer knows only about the layer below. Widgets know nothing about the window; the core knows nothing about concrete widgets.
 
-## Этап 1 — решения по окну (реализовано)
+## Stage 1 — window decisions (implemented)
 
-### Геометрия
-- **Primary source — рантайм**: `NSScreen.safeAreaInsets.top > 0` ⇒ экран с чёлкой; ширина выреза = `frame.width − auxiliaryTopLeftArea.width − auxiliaryTopRightArea.width`.
-- **Калибровочный словарь** `NotchGeometry.calibrated: [ModelIdentifier: NotchGeometry]` — радиусы углов и fallback-значения. В MVP заполнена единственная запись: `MacBookPro18,1/18,2` (16" M1 Pro/Max 2021), сверенная на реальном железе. Новые модели добавляются одной строкой.
-- Экран без чёлки ⇒ `NotchGeometry.pill` — та же вью, форма «pill» у верхней кромки. Кодовый путь один, ветвление только в форме.
+### Geometry
+- **Primary source — runtime**: `NSScreen.safeAreaInsets.top > 0` ⇒ the screen has a notch; cutout width = `frame.width − auxiliaryTopLeftArea.width − auxiliaryTopRightArea.width`.
+- **Calibration table** `NotchGeometry.calibrated: [ModelIdentifier: NotchGeometry]` — corner radii and fallback values. The MVP ships a single entry: `MacBookPro18,1/18,2` (16" M1 Pro/Max 2021), verified on real hardware (185×32 pt at the default 1728×1117 logical resolution — point values scale with the resolution setting, which is exactly why runtime detection stays primary). New models are one line each.
+- Screen without a notch ⇒ `NotchGeometry.pill` — the same view renders as a pill at the top edge. One code path; only the shape differs.
 
-### Окно
-- `NSPanel` (`.borderless`, `.nonactivatingPanel`): не забирает фокус у активного приложения при hover/кликах.
-- `level = .statusBar` — поверх меню-бара; `collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]` — живёт во всех Spaces и поверх fullscreen-приложений.
-- **Окно всегда имеет expanded-размер** — анимируется форма внутри SwiftUI (spring `response 0.38 / damping 0.78`), а не фрейм окна. Ресайз NSWindow в реальном времени дёргается; все зрелые notch-приложения делают так же.
-- Следствие: невидимая часть окна перекрывает меню-бар ⇒ `PassThroughHostingView.hitTest` пропускает события мыши насквозь везде, кроме текущей интерактивной зоны (вырез в collapsed / панель в expanded). Зону отдаёт контроллер, а не SwiftUI — единственная точка истины.
+### Window
+- `NSPanel` (`.borderless`, `.nonactivatingPanel`): never steals focus from the active app on hover or click.
+- `level = .statusBar` — above the menu bar; `collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]` — lives on all Spaces and above fullscreen apps.
+- **The window always has the expanded size** — the shape animates inside SwiftUI (spring, open 0.38 / close 0.30, damping 0.78), not the window frame. Live `NSWindow` resizing stutters; every mature notch app does the same.
+- Consequence: the invisible part of the window overlaps the menu bar ⇒ `PassThroughHostingView.hitTest` passes mouse events through everywhere outside the current interactive zone (the cutout when collapsed / the panel when expanded). The zone is provided by the controller, not by SwiftUI — a single source of truth.
+- Hover events are noisy while SwiftUI rebuilds tracking areas during the shape animation, so the delayed collapse re-checks the REAL cursor position (`NSEvent.mouseLocation`) against the interactive zone and aborts if the cursor is still inside.
+- The hoverable view is larger than the visible shape (transparent margin + `contentShape`): the trigger zone and the hit-test zone are derived from the same formula.
 
-### Мультимонитор
-- `AppDelegate` держит `[CGDirectDisplayID: NotchWindowController]`, диффит по `NSApplication.didChangeScreenParametersNotification`: подключился экран — создали контроллер (notch или pill — решает `NotchGeometry.detect`), отключился — снесли, поменялся фрейм — пересоздали.
+### Multi-monitor
+- `AppDelegate` keeps `[CGDirectDisplayID: NotchWindowController]` and diffs it on `NSApplication.didChangeScreenParametersNotification`: screen connected — controller created (notch or pill decided by `NotchGeometry.detect`), disconnected — torn down, frame changed — recreated.
 
-## Этап 2 — протокол NotchWidget (ЧЕРНОВИК, финализируется на Этапе 2)
+## Stage 2 — NotchWidget protocol (DRAFT, to be finalized in Stage 2)
 
 ```swift
 protocol NotchWidget {
@@ -51,13 +53,13 @@ protocol NotchWidget {
 }
 ```
 
-Планируемые решения (будут уточнены при реализации):
-- **WidgetRegistry** — единственная точка регистрации; порядок отображения персистится, drag&drop reorder.
-- **Push vs poll**: `updateInterval == nil` ⇒ виджет сам публикует обновления (ObservableObject/Combine); иначе платформа дергает его по таймеру, только пока виджет видим.
-- **Live-lock**: механизм `holdExpanded` — виджет сообщает «идёт live-обновление, не сворачивай» (кейс температурных датчиков).
-- **External-process-backed widgets** (Этап 4): виджет-обёртка, чей источник данных — XPC/socket к внешнему привилегированному демону. Платформа не требует повышенных прав; entitlements остаются минимальными. Fan-control подключится как обычный `NotchWidget`, дергающий XPC внутри себя.
+Planned decisions (to be refined during implementation):
+- **WidgetRegistry** — the single registration point; display order is persisted, drag & drop reorder.
+- **Push vs poll**: `updateInterval == nil` ⇒ the widget publishes its own updates (ObservableObject/Combine); otherwise the platform polls it on a timer, only while the widget is visible.
+- **Live-lock**: a `holdsExpanded` mechanism — a widget tells the platform "live update in progress, don't collapse" (the temperature-sensor case).
+- **External-process-backed widgets** (Stage 4): a wrapper widget whose data source is XPC/socket to an external privileged daemon. The platform itself requires no elevated privileges; entitlements stay minimal. Fan control will plug in as a regular `NotchWidget` that talks XPC internally.
 
-## Сборка
+## Build
 
-- SPM executable (без Xcode-проекта); `swift run NotchDeck` для разработки.
-- `scripts/bundle.sh [debug|release]` — собирает `NotchDeck.app` (`LSUIElement=true`, ad-hoc подпись). Бандл обязателен для `SMAppService` (автозапуск, Этап 3.5).
+- SPM executable (no Xcode project); `swift run NotchDeck` for development.
+- `scripts/bundle.sh [debug|release]` — builds `NotchDeck.app` (`LSUIElement=true`, ad-hoc signed, version injected from the `VERSION` file). The bundle is required for `SMAppService` (launch at login, Stage 3.5).

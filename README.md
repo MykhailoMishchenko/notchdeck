@@ -1,48 +1,48 @@
 # NotchDeck
 
-**Чёлка MacBook как рабочее пространство.** NotchDeck превращает область вокруг выреза камеры в интерактивную панель: наведи курсор — она плавно раскрывается в док с виджетами; убери — бесшовно сливается с чёлкой обратно.
+**Your MacBook notch, turned into a workspace.** NotchDeck transforms the area around the camera cutout into an interactive panel: hover over it and it smoothly expands into a widget dock; move away and it seamlessly melts back into the notch.
 
 ![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-black)
 ![Swift](https://img.shields.io/badge/Swift-5.10-orange)
 ![Version](https://img.shields.io/badge/version-0.1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## Возможности
+## Features
 
-- **Hover-панель у чёлки** — раскрытие spring-анимацией при наведении, зона срабатывания шире формы (реагирует «на подлёте»), быстрое сворачивание при уводе курсора.
-- **Не мешает системе** — клики проходят сквозь невидимую часть окна: меню-бар полностью работоспособен. Панель не забирает фокус у активного приложения.
-- **Внешние мониторы** — на дисплеях без чёлки панель становится компактной pill-плашкой у верхней кромки. Мультимонитор из коробки, горячее подключение.
-- **Точная геометрия** — вырез детектится в рантайме через `NSScreen`, форма подгоняется пиксель-в-пиксель. Калибровка сверена на реальном MacBook Pro 16" M1 Pro 2021.
-- **Работает везде** — во всех Spaces и поверх fullscreen-приложений.
+- **Hover panel at the notch** — spring-animated expansion on hover, with a trigger zone larger than the visible shape (reacts as the cursor approaches), and snappy collapse when the cursor leaves.
+- **Stays out of the system's way** — clicks pass through the invisible part of the window: the menu bar remains fully usable, and the panel never steals focus from the active app.
+- **External monitors** — on displays without a notch the panel becomes a compact pill at the top edge. Multi-monitor works out of the box, including hot plug/unplug.
+- **Pixel-accurate geometry** — the cutout is detected at runtime via `NSScreen` and the shape is fitted precisely. Calibration verified on a real MacBook Pro 16" M1 Pro 2021.
+- **Works everywhere** — across all Spaces and on top of fullscreen apps.
 
-## Модульная платформа
+## A modular platform
 
-NotchDeck — не монолит, а платформа с системой виджетов: новый виджет = реализация протокола `NotchWidget` + одна строка регистрации, без правок ядра. В планах MVP — три виджета (медиа-контролы, полка для файлов с AirDrop, календарь) и точка расширения для внешних модулей с привилегированными демонами (мониторинг датчиков/вентиляторов через XPC). Детали — в [ARCHITECTURE.md](ARCHITECTURE.md).
+NotchDeck is not a monolith — it is a platform with a widget system: a new widget is just an implementation of the `NotchWidget` protocol plus one registration line, with zero changes to the core. The MVP roadmap includes three widgets (media controls, a files shelf with AirDrop, calendar) and an extension point for external modules backed by privileged daemons (sensor/fan monitoring over XPC). See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
-## Требования
+## Requirements
 
 - macOS 13+
-- MacBook Pro с чёлкой для notch-режима (16" M1 Pro 2021 — эталон; остальные модели через рантайм-детект) или любой Mac для pill-режима
+- A MacBook Pro with a notch for notch mode (16" M1 Pro 2021 is the reference; other models via runtime detection), or any Mac for pill mode
 
-## Сборка и запуск
+## Build & run
 
 ```bash
 git clone https://github.com/MykhailoMishchenko/notchdeck.git
 cd notchdeck
-swift run NotchDeck          # dev-запуск
-./scripts/bundle.sh release  # собрать NotchDeck.app
+swift run NotchDeck          # dev run
+./scripts/bundle.sh release  # build NotchDeck.app
 ```
 
-## Дорожная карта
+## Roadmap
 
-- [x] 0.1.0 — каркас notch-окна: hover expand/collapse, pill-fallback, мультимонитор
-- [ ] 0.2.0 — система виджетов: протокол `NotchWidget`, registry, push/poll-обновления, reorder
-- [ ] 0.3.0 — виджеты: media controls, files shelf (drag&drop + AirDrop), календарь
-- [ ] 0.4.0 — настройки: управление виджетами, автозапуск при логине
-- [ ] 0.5.0 — точка расширения для external-process виджетов (XPC) + документация интеграции
+- [x] 0.1.0 — notch window core: hover expand/collapse, pill fallback, multi-monitor
+- [ ] 0.2.0 — widget system: `NotchWidget` protocol, registry, push/poll updates, reorder
+- [ ] 0.3.0 — widgets: media controls, files shelf (drag & drop + AirDrop), calendar
+- [ ] 0.4.0 — settings: widget toggles, launch at login
+- [ ] 0.5.0 — extension point for external-process widgets (XPC) + integration docs
 
-Версионирование: единый источник — файл [`VERSION`](VERSION), релизы тегируются `vX.Y.Z`, история — в [CHANGELOG.md](CHANGELOG.md).
+Versioning: the single source of truth is the [`VERSION`](VERSION) file; releases are tagged `vX.Y.Z`, history lives in [CHANGELOG.md](CHANGELOG.md).
 
-## Лицензия
+## License
 
 [MIT](LICENSE)

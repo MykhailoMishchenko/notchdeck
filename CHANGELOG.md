@@ -1,17 +1,17 @@
 # Changelog
 
-Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/lang/ru/).
-Каждый фичевый релиз: бамп `VERSION`, запись здесь, git-тег `vX.Y.Z`.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
+Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
 ## [0.1.0] — 2026-07-14
 
 ### Added
-- Каркас notch-окна: borderless `NSPanel` уровня `.statusBar`, живёт во всех Spaces и поверх fullscreen-приложений.
-- Hover expand/collapse со spring-анимацией (открытие 0.38 / закрытие 0.30, задержка сворачивания 100 мс).
-- Зона срабатывания hover шире видимой формы (+14 pt по бокам, +8 pt снизу) — раскрытие «на подлёте».
-- Рантайм-детект геометрии чёлки (`safeAreaInsets` + auxiliary areas) с калибровочным словарём моделей; запись для MacBook Pro 16" M1 Pro 2021 сверена на реальном железе (185×32 pt при 1728×1117).
-- Pill-fallback для дисплеев без чёлки (внешние мониторы), общий кодовый путь.
-- Мультимонитор: по одному окну на дисплей, горячее подключение/отключение.
-- Click-through: события мыши проходят сквозь невидимую часть окна (меню-бар не блокируется).
-- Контент раскрытой панели появляется после раскрытия формы (150 мс) и исчезает мгновенно (80 мс) при сворачивании.
-- `scripts/bundle.sh` — сборка `NotchDeck.app` (`LSUIElement`, ad-hoc подпись).
+- Notch window core: borderless `NSPanel` at `.statusBar` level, present on all Spaces and above fullscreen apps.
+- Hover expand/collapse with spring animation (0.38 open / 0.30 close, 100 ms collapse grace delay).
+- Hover trigger zone larger than the visible shape (+14 pt sides, +8 pt below) — expansion starts as the cursor approaches.
+- Runtime notch geometry detection (`safeAreaInsets` + auxiliary areas) with a per-model calibration table; the MacBook Pro 16" M1 Pro 2021 entry verified on real hardware (185×32 pt at 1728×1117).
+- Pill fallback for displays without a notch (external monitors), sharing the same code path.
+- Multi-monitor: one window per display, hot plug/unplug handling.
+- Click-through: mouse events pass through the invisible part of the window (menu bar stays usable).
+- Expanded panel content fades in after the shape opens (150 ms) and disappears instantly (80 ms) on collapse.
+- `scripts/bundle.sh` — builds `NotchDeck.app` (`LSUIElement`, ad-hoc signed) with the version injected from `VERSION`.
