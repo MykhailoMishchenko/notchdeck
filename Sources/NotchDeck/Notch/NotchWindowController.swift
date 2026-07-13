@@ -15,7 +15,7 @@ final class NotchWindowController {
     private let collapsedSlopY: CGFloat = 8
     private let expandedSlop: CGFloat = 4
 
-    init(screen: NSScreen) {
+    init(screen: NSScreen, registry: WidgetRegistry) {
         self.screen = screen
         if let detected = NotchGeometry.detect(for: screen) {
             self.geometry = detected
@@ -37,6 +37,7 @@ final class NotchWindowController {
 
         let root = NotchContainerView(
             state: state,
+            registry: registry,
             hasNotch: hasNotch,
             geometry: geometry,
             expandedSize: expandedSize,
@@ -49,6 +50,12 @@ final class NotchWindowController {
         state.isCursorInZone = { [weak self] in
             guard let self else { return false }
             return self.interactiveRectInScreen().contains(NSEvent.mouseLocation)
+        }
+        state.isCollapseBlocked = { [weak registry] in
+            registry?.holdsExpanded ?? false
+        }
+        state.onExpandedChange = { [weak registry] expanded in
+            expanded ? registry?.panelDidExpand() : registry?.panelDidCollapse()
         }
         window.contentView = hosting
         window.setFrame(frame, display: true)

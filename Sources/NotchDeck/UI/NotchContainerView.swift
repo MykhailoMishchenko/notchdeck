@@ -4,33 +4,49 @@ import SwiftUI
 final class NotchState: ObservableObject {
     @Published var expanded = false {
         didSet {
-            if expanded != oldValue { Log.info("state: \(expanded ? "expanded" : "collapsed")") }
+            guard expanded != oldValue else { return }
+            Log.info("state: \(expanded ? "expanded" : "collapsed")")
+            onExpandedChange(expanded)
         }
     }
+    /// Set by the controller: feeds the widget registry's visibility lifecycle.
+    var onExpandedChange: (Bool) -> Void = { _ in }
     private var collapseWork: DispatchWorkItem?
     /// Set by the controller: is the REAL cursor currently inside the interactive zone (screen coords).
     /// Hover events are noisy while the shape animates; cursor position is the source of truth.
     var isCursorInZone: () -> Bool = { false }
+    /// Set by the controller: a visible widget holds the panel open (live-lock). Re-checked every second.
+    var isCollapseBlocked: () -> Bool = { false }
 
-    // inputs {hovering}, does {expands immediately on hover-in; on hover-out collapses after a grace delay, but only if the cursor really left the zone}, returns {}
+    // inputs {hovering}, does {expands immediately on hover-in; on hover-out collapses after a grace delay, unless the cursor is still in the zone or a widget live-lock blocks it (then re-checks in 1s)}, returns {}
     func setHovering(_ hovering: Bool) {
         collapseWork?.cancel()
         if hovering {
             expanded = true
         } else {
-            let work = DispatchWorkItem { [weak self] in
-                guard let self, !self.isCursorInZone() else { return }
-                self.expanded = false
-            }
-            collapseWork = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.10, execute: work)
+            scheduleCollapse(after: 0.10)
         }
+    }
+
+    // inputs {delay}, does {schedules a collapse attempt; aborts if cursor returned, retries later if live-locked}, returns {}
+    private func scheduleCollapse(after delay: TimeInterval) {
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, !self.isCursorInZone() else { return }
+            if self.isCollapseBlocked() {
+                self.scheduleCollapse(after: 1.0)
+                return
+            }
+            self.expanded = false
+        }
+        collapseWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 }
 
 // inputs {state, geometry, hasNotch, expandedSize}, does {renders collapsed notch/pill and hover-expanded panel with spring animation}, returns {View}
 struct NotchContainerView: View {
     @ObservedObject var state: NotchState
+    let registry: WidgetRegistry
     let hasNotch: Bool
     let geometry: NotchGeometry
     let expandedSize: CGSize
@@ -53,7 +69,7 @@ struct NotchContainerView: View {
                 NotchShape(topCornerRadius: geometry.topCornerRadius, bottomCornerRadius: bottomRadius)
                     .fill(Color.black)
                 if state.expanded {
-                    expandedContent
+                    WidgetPanelView(registry: registry)
                         .padding(.top, geometry.notchHeight)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 12)
@@ -77,28 +93,4 @@ struct NotchContainerView: View {
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
-    private var expandedContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: hasNotch ? "macbook" : "display")
-                    .foregroundStyle(.white.opacity(0.8))
-                Text("NotchDeck")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                Spacer()
-                Button {
-                    NSApp.terminate(nil)
-                } label: {
-                    Image(systemName: "power")
-                        .foregroundStyle(.white.opacity(0.5))
-                }
-                .buttonStyle(.plain)
-            }
-            Text("Этап 1 — каркас окна. Здесь появятся виджеты.")
-                .font(.callout)
-                .foregroundStyle(.white.opacity(0.6))
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
 }

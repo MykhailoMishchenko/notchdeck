@@ -3,6 +3,17 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.2.0] — 2026-07-14
+
+### Added
+- Widget platform core: the `NotchWidget` protocol (id, views, `updateInterval`, `holdsExpanded` live-lock, `refresh`, visibility lifecycle) with protocol-extension defaults — a minimal widget is ~15 lines.
+- `WidgetRegistry`: single registration point, duplicate-id protection, display order persisted to `UserDefaults`.
+- Drag & drop widget reorder inside the expanded panel, with live reordering while dragging.
+- Push and poll update models: push widgets publish their own updates; poll widgets get `refresh()` on their interval plus once on appear, timers active only while the panel is visible.
+- Live-lock: a widget reporting `holdsExpanded == true` keeps the panel open; collapse retries every second until released.
+- Visibility lifecycle across multiple screens: `onAppear` on first visible panel, `onDisappear` when none remain.
+- Three placeholder widgets (Music / Files / Calendar) proving the pipeline; replaced by real ones in 0.3.0.
+
 ## [0.1.0] — 2026-07-14
 
 ### Added

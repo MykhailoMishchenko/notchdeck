@@ -39,25 +39,35 @@ Dependency rule: each layer knows only about the layer below. Widgets know nothi
 ### Multi-monitor
 - `AppDelegate` keeps `[CGDirectDisplayID: NotchWindowController]` and diffs it on `NSApplication.didChangeScreenParametersNotification`: screen connected — controller created (notch or pill decided by `NotchGeometry.detect`), disconnected — torn down, frame changed — recreated.
 
-## Stage 2 — NotchWidget protocol (DRAFT, to be finalized in Stage 2)
+## Stage 2 — widget platform (implemented)
+
+### The `NotchWidget` protocol
 
 ```swift
-protocol NotchWidget {
-    var id: String { get }
+protocol NotchWidget: AnyObject {
+    var id: String { get }                      // stable unique id (order persistence, settings)
     var displayName: String { get }
-    var collapsedView: AnyView { get }
-    var expandedView: AnyView { get }
-    var updateInterval: TimeInterval? { get }   // nil = push-based
-    func onAppear()
-    func onDisappear()
+    var collapsedView: AnyView { get }          // default: EmptyView
+    var expandedView: AnyView { get }           // card inside the expanded panel
+    var updateInterval: TimeInterval? { get }   // nil = push-based; default nil
+    var holdsExpanded: Bool { get }             // live-lock; default false
+    func refresh()                              // poll target; default no-op
+    func onAppear()                             // panel visible on >=1 screen; default no-op
+    func onDisappear()                          // panel visible nowhere; default no-op
 }
 ```
 
-Planned decisions (to be refined during implementation):
-- **WidgetRegistry** — the single registration point; display order is persisted, drag & drop reorder.
-- **Push vs poll**: `updateInterval == nil` ⇒ the widget publishes its own updates (ObservableObject/Combine); otherwise the platform polls it on a timer, only while the widget is visible.
-- **Live-lock**: a `holdsExpanded` mechanism — a widget tells the platform "live update in progress, don't collapse" (the temperature-sensor case).
-- **External-process-backed widgets** (Stage 4): a wrapper widget whose data source is XPC/socket to an external privileged daemon. The platform itself requires no elevated privileges; entitlements stay minimal. Fan control will plug in as a regular `NotchWidget` that talks XPC internally.
+Everything except `id`, `displayName`, `expandedView` has a default via a protocol extension — a minimal widget is ~15 lines. Adding a widget = implement the protocol + one `registry.register(...)` line; the core does not change (proven by the three Stage 3 widgets).
+
+### WidgetRegistry
+- The single registration point; duplicate ids are rejected.
+- **Order**: persisted to `UserDefaults` (`dev.notchdeck.widgetOrder`); drag & drop reorder in the panel (`onDrag`/`DropDelegate`, live reordering on `dropEntered`). The persisted-order sort is stability-corrected (Swift's sort is not stable).
+- **Push vs poll**: `updateInterval == nil` ⇒ the widget publishes its own updates (it is an `ObservableObject` internally and its views observe it directly — the platform is not involved). Otherwise the registry runs a timer per widget and calls `refresh()`, plus one `refresh()` immediately on appear. Timers run only while the panel is visible somewhere.
+- **Visibility lifecycle**: the registry counts visible panels across screens; `onAppear`/polling start when the first panel expands, `onDisappear`/timer teardown when the last one collapses. One registry serves all screens.
+- **Live-lock**: `holdsExpanded` is *pulled* at collapse-decision time. If any visible widget holds, the collapse attempt re-schedules itself every 1 s until released (or until the cursor returns). Pull keeps the protocol passive — no callback plumbing into widgets. This is the temperature-sensor case: the panel stays open while a live reading is being rendered.
+
+### Panel UI
+- `WidgetPanelView` (header + cards) is the only view that knows about the registry; `WidgetCardView` provides uniform card chrome around each widget's `expandedView`.
 
 ## Build
 
