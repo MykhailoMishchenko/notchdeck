@@ -19,6 +19,12 @@ final class NotchState: ObservableObject {
     /// Set by the controller: a visible widget holds the panel open (live-lock). Re-checked every second.
     var isCollapseBlocked: () -> Bool = { false }
 
+    private var watchdog: Timer?
+
+    deinit {
+        watchdog?.invalidate()
+    }
+
     // inputs {hovering}, does {expands immediately on hover-in; on hover-out collapses after a grace delay, unless the cursor is still in the zone or a widget live-lock blocks it (then re-checks in 1s)}, returns {}
     func setHovering(_ hovering: Bool) {
         collapseWork?.cancel()
@@ -27,12 +33,6 @@ final class NotchState: ObservableObject {
         } else {
             scheduleCollapse(after: 0.10)
         }
-    }
-
-    private var watchdog: Timer?
-
-    deinit {
-        watchdog?.invalidate()
     }
 
     // inputs {}, does {safety net while expanded: hover exit events get swallowed by system gestures (Space switch, Mission Control), so re-check the real cursor position every 0.5s and collapse if it left the zone}, returns {}
@@ -68,10 +68,18 @@ final class NotchState: ObservableObject {
     }
 }
 
-// inputs {state, geometry, hasNotch, expandedSize}, does {renders collapsed notch/pill and hover-expanded panel with spring animation}, returns {View}
+// inputs {}, does {reports the collapsed strip's self-measured width up the tree}, returns {preference key}
+struct CollapsedWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+// inputs {state, registry, geometry, hasNotch, expandedSize, slops}, does {renders the self-sizing collapsed strip (with Dynamic-Island widget slots) and the hover-expanded panel with spring animation}, returns {View}
 struct NotchContainerView: View {
     @ObservedObject var state: NotchState
-    let registry: WidgetRegistry
+    @ObservedObject var registry: WidgetRegistry
     let hasNotch: Bool
     let geometry: NotchGeometry
     let expandedSize: CGSize
@@ -79,43 +87,74 @@ struct NotchContainerView: View {
     let collapsedSlopY: CGFloat
     let expandedSlop: CGFloat
 
-    private var collapsedWidth: CGFloat { geometry.notchWidth + geometry.topCornerRadius * 2 }
-    private var collapsedHeight: CGFloat { geometry.notchHeight }
-    private var currentWidth: CGFloat { state.expanded ? expandedSize.width : collapsedWidth }
-    private var currentHeight: CGFloat { state.expanded ? expandedSize.height : collapsedHeight }
+    @State private var collapsedContentWidth: CGFloat = 0
+
+    private var collapsedBaseWidth: CGFloat { geometry.notchWidth + geometry.topCornerRadius * 2 }
     private var bottomRadius: CGFloat { state.expanded ? 24 : geometry.bottomCornerRadius }
     /// Hover zone is larger than the visible shape so expansion triggers on approach.
-    private var hoverWidth: CGFloat { state.expanded ? expandedSize.width : collapsedWidth + collapsedSlopX * 2 }
-    private var hoverHeight: CGFloat { state.expanded ? expandedSize.height + expandedSlop : collapsedHeight + collapsedSlopY }
+    private var hoverWidth: CGFloat {
+        state.expanded
+            ? expandedSize.width
+            : max(collapsedBaseWidth, collapsedContentWidth) + collapsedSlopX * 2
+    }
+    private var hoverHeight: CGFloat {
+        state.expanded ? expandedSize.height + expandedSlop : geometry.notchHeight + collapsedSlopY
+    }
+    private var shape: NotchShape {
+        NotchShape(topCornerRadius: geometry.topCornerRadius, bottomCornerRadius: bottomRadius)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            ZStack(alignment: .top) {
-                NotchShape(topCornerRadius: geometry.topCornerRadius, bottomCornerRadius: bottomRadius)
-                    .fill(Color.black)
-                if state.expanded {
-                    WidgetPanelView(registry: registry)
-                        .padding(.top, geometry.notchHeight)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 12)
-                        .transition(.asymmetric(
-                            insertion: .opacity.animation(.easeOut(duration: 0.15).delay(0.15)),
-                            removal: .opacity.animation(.easeIn(duration: 0.08))
-                        ))
-                }
-            }
-            .frame(width: currentWidth, height: currentHeight)
-            .clipShape(NotchShape(topCornerRadius: geometry.topCornerRadius, bottomCornerRadius: bottomRadius))
-            .frame(width: hoverWidth, height: hoverHeight, alignment: .top)
-            .contentShape(Rectangle())
-            .onHover { state.setHovering($0) }
-            .animation(
-                .spring(response: state.expanded ? 0.38 : 0.30, dampingFraction: 0.78),
-                value: state.expanded
-            )
+            content
+                .background(shape.fill(Color.black))
+                .clipShape(shape)
+                .frame(width: hoverWidth, height: hoverHeight, alignment: .top)
+                .contentShape(Rectangle())
+                .onHover { state.setHovering($0) }
+                .animation(
+                    .spring(response: state.expanded ? 0.38 : 0.30, dampingFraction: 0.78),
+                    value: state.expanded
+                )
+                .animation(.spring(response: 0.30, dampingFraction: 0.80), value: collapsedContentWidth)
+                .onPreferenceChange(CollapsedWidthPreferenceKey.self) { collapsedContentWidth = $0 }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
+    @ViewBuilder private var content: some View {
+        if state.expanded {
+            WidgetPanelView(registry: registry)
+                .padding(.top, geometry.notchHeight)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
+                .frame(width: expandedSize.width, height: expandedSize.height)
+                .transition(.asymmetric(
+                    insertion: .opacity.animation(.easeOut(duration: 0.15).delay(0.15)),
+                    removal: .opacity.animation(.easeIn(duration: 0.08))
+                ))
+        } else {
+            collapsedStrip
+        }
+    }
+
+    /// The cutout gap stays fixed; widget slot views sit beside it and stretch the black shape when active.
+    private var collapsedStrip: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ForEach(registry.widgets, id: \.id) { widget in widget.collapsedLeading }
+            }
+            Color.clear.frame(width: collapsedBaseWidth)
+            HStack(spacing: 0) {
+                ForEach(registry.widgets, id: \.id) { widget in widget.collapsedTrailing }
+            }
+        }
+        .frame(height: geometry.notchHeight)
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(key: CollapsedWidthPreferenceKey.self, value: proxy.size.width)
+            }
+        )
+    }
 }

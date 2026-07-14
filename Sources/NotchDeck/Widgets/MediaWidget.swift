@@ -7,16 +7,20 @@ final class MediaModel: ObservableObject {
     @Published var artist = ""
     @Published var isPlaying = false
     @Published var source: String?
+    @Published var artwork: NSImage?
     @Published var pickerVisible = false
     @Published var loadingPlaylists = false
     @Published var playlists: [String] = []
+
+    var hasTrack: Bool { !track.isEmpty }
 }
 
-// inputs {}, does {push-based media widget: track/state via DistributedNotificationCenter (Spotify + Apple Music), controls via AppleScript}, returns {NotchWidget}
+// inputs {}, does {push-based media widget: track/state via DistributedNotificationCenter (Spotify + Apple Music), artwork fetch, playlist picker, controls via AppleScript}, returns {NotchWidget}
 final class MediaWidget: NotchWidget {
     let id = "media"
     let displayName = "Media"
     private let model = MediaModel()
+    private var artworkKey = ""
 
     init() {
         let center = DistributedNotificationCenter.default()
@@ -39,11 +43,15 @@ final class MediaWidget: NotchWidget {
         ))
     }
 
+    var collapsedLeading: AnyView { AnyView(MediaCollapsedArtView(model: model)) }
+    var collapsedTrailing: AnyView { AnyView(MediaCollapsedBarsView(model: model)) }
+    var collapsedAccessoryWidth: CGFloat { model.hasTrack ? 72 : 0 }
+
     func onAppear() {
         refreshFromRunningPlayer()
     }
 
-    // inputs {notification}, does {push update: applies track/artist/state from the player's broadcast; hides the playlist picker once something plays}, returns {}
+    // inputs {notification}, does {push update: applies track/artist/state, hides the picker once something plays, refetches artwork}, returns {}
     @objc private func playbackChanged(_ notification: Notification) {
         let info = notification.userInfo
         DispatchQueue.main.async { [self] in
@@ -53,6 +61,7 @@ final class MediaWidget: NotchWidget {
             model.isPlaying = (info?["Player State"] as? String) == "Playing"
             if model.isPlaying { model.pickerVisible = false }
             Log.info("media push: \(model.source ?? "?") \(model.isPlaying ? "playing" : "paused") \(model.track)")
+            fetchArtwork()
         }
     }
 
@@ -73,7 +82,7 @@ final class MediaWidget: NotchWidget {
         """
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-            let result = self.runScript(script)
+            let result = self.runScript(script)?.stringValue
             let names = (result ?? "")
                 .components(separatedBy: "\n")
                 .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -104,6 +113,37 @@ final class MediaWidget: NotchWidget {
         }
     }
 
+    // inputs {}, does {fetches cover art for the current track (Music: raw artwork data; Spotify: artwork url + download), deduped per track}, returns {}
+    private func fetchArtwork() {
+        guard model.hasTrack else {
+            artworkKey = ""
+            model.artwork = nil
+            return
+        }
+        let key = "\(model.source ?? "")|\(model.track)|\(model.artist)"
+        guard key != artworkKey else { return }
+        artworkKey = key
+        let source = model.source
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self else { return }
+            var image: NSImage?
+            if source == "Spotify" {
+                if let urlString = self.runScript("tell application \"Spotify\" to get artwork url of current track")?.stringValue,
+                   let url = URL(string: urlString),
+                   let data = try? Data(contentsOf: url) {
+                    image = NSImage(data: data)
+                }
+            } else if let data = self.runScript("tell application \"Music\" to get data of artwork 1 of current track")?.data {
+                image = NSImage(data: data)
+            }
+            DispatchQueue.main.async {
+                guard self.artworkKey == key else { return }
+                self.model.artwork = image
+                Log.info("media: artwork \(image == nil ? "missing" : "loaded") for \(self.model.track)")
+            }
+        }
+    }
+
     // inputs {}, does {pulls initial state from a running player once (before the first push arrives), off the main thread}, returns {}
     private func refreshFromRunningPlayer() {
         guard model.track.isEmpty, let player = runningPlayer() else { return }
@@ -116,7 +156,7 @@ final class MediaWidget: NotchWidget {
         end tell
         """
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self, let result = self.runScript(script), !result.isEmpty else { return }
+            guard let self, let result = self.runScript(script)?.stringValue, !result.isEmpty else { return }
             let parts = result.components(separatedBy: "|")
             guard parts.count == 3 else { return }
             DispatchQueue.main.async {
@@ -124,6 +164,7 @@ final class MediaWidget: NotchWidget {
                 self.model.isPlaying = parts[0] == "playing"
                 self.model.track = parts[1]
                 self.model.artist = parts[2]
+                self.fetchArtwork()
             }
         }
     }
@@ -136,120 +177,12 @@ final class MediaWidget: NotchWidget {
         return nil
     }
 
-    // inputs {source}, does {executes AppleScript}, returns {string result or nil}
+    // inputs {source}, does {executes AppleScript}, returns {result descriptor or nil}
     @discardableResult
-    private func runScript(_ source: String) -> String? {
+    private func runScript(_ source: String) -> NSAppleEventDescriptor? {
         var error: NSDictionary?
         let result = NSAppleScript(source: source)?.executeAndReturnError(&error)
         if let error { Log.info("media script error: \(error)") }
-        return result?.stringValue
-    }
-}
-
-// inputs {model, callbacks}, does {media card UI: now-playing controls, idle state, Apple Music playlist picker}, returns {View}
-struct MediaCardView: View {
-    @ObservedObject var model: MediaModel
-    let onCommand: (String) -> Void
-    let onTogglePicker: () -> Void
-    let onPlayPlaylist: (String) -> Void
-
-    var body: some View {
-        Group {
-            if model.pickerVisible {
-                picker
-            } else if model.track.isEmpty {
-                idle
-            } else {
-                nowPlaying
-            }
-        }
-        .padding(8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var idle: some View {
-        Button(action: onTogglePicker) {
-            VStack(spacing: 6) {
-                Image(systemName: "music.note.list")
-                    .font(.title3)
-                    .foregroundStyle(.white.opacity(0.4))
-                Text("Choose a playlist")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var picker: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 4) {
-                Button(action: onTogglePicker) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.5))
-                }
-                .buttonStyle(.plain)
-                Text("Playlists")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-            if model.loadingPlaylists {
-                ProgressView()
-                    .controlSize(.small)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if model.playlists.isEmpty {
-                Text("No playlists")
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.4))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(model.playlists, id: \.self) { name in
-                            Button { onPlayPlaylist(name) } label: {
-                                Text(name)
-                                    .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.85))
-                                    .lineLimit(1)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 2)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private var nowPlaying: some View {
-        VStack(spacing: 8) {
-            Text(model.track)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-            Text(model.artist)
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.55))
-                .lineLimit(1)
-            HStack(spacing: 14) {
-                controlButton("backward.fill") { onCommand("previous track") }
-                controlButton(model.isPlaying ? "pause.fill" : "play.fill") { onCommand("playpause") }
-                controlButton("forward.fill") { onCommand("next track") }
-            }
-        }
-    }
-
-    private func controlButton(_ icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.85))
-        }
-        .buttonStyle(.plain)
+        return result
     }
 }

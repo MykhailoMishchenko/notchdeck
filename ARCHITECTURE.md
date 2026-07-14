@@ -48,6 +48,9 @@ protocol NotchWidget: AnyObject {
     var id: String { get }                      // stable unique id (order persistence, settings)
     var displayName: String { get }
     var collapsedView: AnyView { get }          // default: EmptyView
+    var collapsedLeading: AnyView { get }       // Dynamic-Island slot left of the cutout; default EmptyView
+    var collapsedTrailing: AnyView { get }      // Dynamic-Island slot right of the cutout; default EmptyView
+    var collapsedAccessoryWidth: CGFloat { get } // current width of both slots (0 = inactive); default 0
     var expandedView: AnyView { get }           // card inside the expanded panel
     var updateInterval: TimeInterval? { get }   // nil = push-based; default nil
     var holdsExpanded: Bool { get }             // live-lock; default false
@@ -56,6 +59,8 @@ protocol NotchWidget: AnyObject {
     func onDisappear()                          // panel visible nowhere; default no-op
 }
 ```
+
+**Dynamic-Island slots**: the collapsed strip is self-sizing — an `HStack` of every widget's `collapsedLeading`, a fixed clear gap the width of the cutout, then every `collapsedTrailing`. Slot views observe their own models and render empty when inactive, so the black shape stretches and shrinks around them with a spring (measured via a `PreferenceKey`; the hover/hit zone follows via `collapsedAccessoryWidth`, pulled at event time). The media widget uses this for album art (left) + equalizer bars (right); a future fan-control widget can show a temperature readout the same way.
 
 Everything except `id`, `displayName`, `expandedView` has a default via a protocol extension — a minimal widget is ~15 lines. Adding a widget = implement the protocol + one `registry.register(...)` line; the core does not change (proven by the three Stage 3 widgets).
 

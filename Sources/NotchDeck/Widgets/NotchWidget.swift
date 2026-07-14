@@ -7,6 +7,12 @@ protocol NotchWidget: AnyObject {
     var displayName: String { get }
     /// Shown in the collapsed strip (optional; most widgets show nothing when collapsed).
     var collapsedView: AnyView { get }
+    /// Dynamic-Island slots: shown left/right of the camera cutout in the collapsed strip.
+    /// Views observe their own models and render empty when inactive.
+    var collapsedLeading: AnyView { get }
+    var collapsedTrailing: AnyView { get }
+    /// Current total width of both collapsed slots (0 = inactive); pulled by the platform for hover/hit-zone math.
+    var collapsedAccessoryWidth: CGFloat { get }
     /// Shown as a card inside the expanded panel.
     var expandedView: AnyView { get }
     /// nil = push-based (widget publishes its own updates); otherwise the platform
@@ -25,6 +31,9 @@ protocol NotchWidget: AnyObject {
 
 extension NotchWidget {
     var collapsedView: AnyView { AnyView(EmptyView()) }
+    var collapsedLeading: AnyView { AnyView(EmptyView()) }
+    var collapsedTrailing: AnyView { AnyView(EmptyView()) }
+    var collapsedAccessoryWidth: CGFloat { 0 }
     var updateInterval: TimeInterval? { nil }
     var holdsExpanded: Bool { false }
     func refresh() {}

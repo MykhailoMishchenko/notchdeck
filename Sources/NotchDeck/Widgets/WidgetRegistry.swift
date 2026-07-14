@@ -34,6 +34,11 @@ final class WidgetRegistry: ObservableObject {
         visiblePanels > 0 && widgets.contains { $0.holdsExpanded }
     }
 
+    /// Total width widgets currently occupy beside the cutout in the collapsed strip (hit-zone math).
+    var collapsedAccessoryWidth: CGFloat {
+        widgets.map(\.collapsedAccessoryWidth).reduce(0, +)
+    }
+
     // inputs {}, does {a panel expanded; on first visible panel starts widget lifecycle + polling}, returns {}
     func panelDidExpand() {
         visiblePanels += 1

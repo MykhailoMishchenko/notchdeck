@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.0] — 2026-07-14
+
+### Added
+- **Dynamic Island**: while a track is loaded, the collapsed notch stretches to show the album cover left of the cutout and animated equalizer bars right of it (bars settle when paused). Generic platform feature: widgets got `collapsedLeading`/`collapsedTrailing` slots; the strip self-sizes around active slots with a spring.
+- Album artwork in the expanded card: cover art fills the card with transport controls on a gradient scrim and a single playlist icon — no more text-only view. Music artwork comes from the library (`artwork data`), Spotify covers are downloaded from `artwork url`.
+
+### Changed
+- Playlist picker redesigned: header removed; back navigation is a right-swipe anywhere on the list (or a single subtle chevron icon); rows highlight on hover.
+
 ## [0.4.1] — 2026-07-14
 
 ### Fixed

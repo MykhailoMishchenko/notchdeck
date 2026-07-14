@@ -15,8 +15,11 @@ final class NotchWindowController {
     private let collapsedSlopY: CGFloat = 8
     private let expandedSlop: CGFloat = 4
 
+    private let registry: WidgetRegistry
+
     init(screen: NSScreen, registry: WidgetRegistry) {
         self.screen = screen
+        self.registry = registry
         if let detected = NotchGeometry.detect(for: screen) {
             self.geometry = detected
             self.hasNotch = true
@@ -72,6 +75,7 @@ final class NotchWindowController {
             height = expandedSize.height + expandedSlop
         } else {
             width = geometry.notchWidth + geometry.topCornerRadius * 2 + collapsedSlopX * 2
+                + registry.collapsedAccessoryWidth
             height = geometry.notchHeight + collapsedSlopY
         }
         return CGRect(x: (window.frame.width - width) / 2, y: 0, width: width, height: height)
