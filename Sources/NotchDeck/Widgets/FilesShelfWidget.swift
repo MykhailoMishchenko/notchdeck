@@ -19,19 +19,15 @@ final class FilesShelfWidget: NotchWidget {
         try? FileManager.default.createDirectory(at: shelfDir, withIntermediateDirectories: true)
     }
 
-    var expandedWidthWeight: CGFloat { 0.7 }
+    /// 0 = no card in the panel row: the slot is reserved for a future widget; the tray is reached via file drags.
+    var expandedWidthWeight: CGFloat { 0 }
     var acceptsFileDrops: Bool { true }
 
     func attach(host: WidgetHost) {
         self.host = host
     }
 
-    var expandedView: AnyView {
-        AnyView(FilesCompactCardView(model: model) { [weak self] in
-            guard let self else { return }
-            self.host?.requestTakeover(self.id)
-        })
-    }
+    var expandedView: AnyView { AnyView(EmptyView()) }
 
     var takeoverView: AnyView {
         AnyView(FilesTakeoverView(

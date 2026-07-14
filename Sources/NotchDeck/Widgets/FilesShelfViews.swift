@@ -1,4 +1,5 @@
 import AppKit
+import QuickLookThumbnailing
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -21,39 +22,7 @@ func loadDroppedURLs(_ providers: [NSItemProvider], completion: @escaping ([URL]
     group.notify(queue: .main) { completion(urls) }
 }
 
-// inputs {model, onOpen}, does {compact Tray card: icon + count badge; click opens the takeover}, returns {View}
-struct FilesCompactCardView: View {
-    @ObservedObject var model: FilesShelfModel
-    let onOpen: () -> Void
-
-    var body: some View {
-        Button(action: onOpen) {
-            VStack(spacing: 6) {
-                Image(systemName: "tray.full")
-                    .font(.title3)
-                    .foregroundStyle(.white.opacity(0.55))
-                    .overlay(alignment: .topTrailing) {
-                        if !model.files.isEmpty {
-                            Text("\(model.files.count)")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(3)
-                                .background(Circle().fill(.blue))
-                                .offset(x: 9, y: -8)
-                        }
-                    }
-                Text("Tray")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// inputs {model, callbacks}, does {full-panel takeover: dashed Files Tray zone (left) + blue AirDrop zone (right); back via swipe-right or chevron}, returns {View}
+// inputs {model, callbacks}, does {full-panel takeover: dashed Files Tray grid (left) + blue AirDrop zone (right); back via swipe-right or chevron}, returns {View}
 struct FilesTakeoverView: View {
     @ObservedObject var model: FilesShelfModel
     let onDropped: ([URL]) -> Void
@@ -89,36 +58,43 @@ struct FilesTakeoverView: View {
     }
 
     private var trayZone: some View {
-        VStack(spacing: 6) {
+        Group {
             if model.files.isEmpty {
-                Image(systemName: "tray.and.arrow.down")
-                    .font(.title3)
-                    .foregroundStyle(.white.opacity(trayTargeted ? 0.95 : 0.55))
-                Text("Files Tray")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.55))
-            } else {
-                HStack(spacing: 4) {
-                    ForEach(model.files.suffix(5), id: \.self) { url in
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
-                            .resizable()
-                            .frame(width: 26, height: 26)
-                    }
-                }
-                HStack(spacing: 8) {
-                    Text("\(model.files.count) file\(model.files.count == 1 ? "" : "s")")
-                        .font(.caption2)
+                VStack(spacing: 6) {
+                    Image(systemName: "tray.and.arrow.down")
+                        .font(.title3)
+                        .foregroundStyle(.white.opacity(trayTargeted ? 0.95 : 0.55))
+                    Text("Files Tray")
+                        .font(.caption)
                         .foregroundStyle(.white.opacity(0.55))
-                    Button(action: onClear) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.45))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(spacing: 4) {
+                    ScrollView(showsIndicators: false) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 38), spacing: 6)], spacing: 6) {
+                            ForEach(model.files, id: \.self) { url in
+                                FileThumbView(url: url)
+                            }
+                        }
+                        .padding(.top, 10)
+                        .padding(.horizontal, 10)
                     }
-                    .buttonStyle(.plain)
+                    HStack(spacing: 8) {
+                        Text("\(model.files.count) file\(model.files.count == 1 ? "" : "s")")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.55))
+                        Button(action: onClear) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.45))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.bottom, 6)
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(RoundedRectangle(cornerRadius: 14).fill(.white.opacity(trayTargeted ? 0.08 : 0.03)))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
@@ -135,12 +111,12 @@ struct FilesTakeoverView: View {
 
     private var airDropZone: some View {
         VStack(spacing: 6) {
-            Image(systemName: "dot.radiowaves.left.and.right")
-                .font(.title3)
-                .foregroundStyle(.white.opacity(airTargeted ? 1 : 0.8))
+            AirDropIconView()
+                .frame(width: 26, height: 26)
+                .opacity(airTargeted ? 1 : 0.85)
             Text("AirDrop")
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(.white.opacity(0.85))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
@@ -152,6 +128,77 @@ struct FilesTakeoverView: View {
         .onDrop(of: [.fileURL], isTargeted: $airTargeted) { providers in
             loadDroppedURLs(providers) { onAirDropped($0) }
             return true
+        }
+    }
+}
+
+// inputs {url}, does {one tray item: QuickLook thumbnail for previewable files (images etc.), native macOS icon otherwise (folders/docs); soft individual hover zoom}, returns {View}
+struct FileThumbView: View {
+    let url: URL
+    @State private var thumbnail: NSImage?
+    @State private var hovered = false
+
+    var body: some View {
+        Group {
+            if let thumbnail {
+                Image(nsImage: thumbnail)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+        .frame(width: 38, height: 38)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .scaleEffect(hovered ? 1.15 : 1)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hovered)
+        .onHover { hovered = $0 }
+        .onAppear { generateThumbnail() }
+        .help(url.lastPathComponent)
+    }
+
+    // inputs {}, does {asks QuickLook for a real content thumbnail; keeps the macOS file icon when none exists}, returns {}
+    private func generateThumbnail() {
+        guard thumbnail == nil else { return }
+        var isDirectory: ObjCBool = false
+        FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+        guard !isDirectory.boolValue else { return }
+        let request = QLThumbnailGenerator.Request(
+            fileAt: url,
+            size: CGSize(width: 76, height: 76),
+            scale: 2,
+            representationTypes: .thumbnail
+        )
+        QLThumbnailGenerator.shared.generateBestRepresentation(for: request) { representation, _ in
+            guard let cgImage = representation?.cgImage else { return }
+            DispatchQueue.main.async {
+                thumbnail = NSImage(cgImage: cgImage, size: .zero)
+            }
+        }
+    }
+}
+
+// inputs {}, does {Apple's real AirDrop glyph from the sharing service, template-tinted white}, returns {View}
+struct AirDropIconView: View {
+    private static let icon: NSImage? = {
+        let image = NSSharingService(named: .sendViaAirDrop)?.image
+        image?.isTemplate = true
+        return image
+    }()
+
+    var body: some View {
+        if let icon = Self.icon {
+            Image(nsImage: icon)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(.white)
+        } else {
+            Image(systemName: "dot.radiowaves.left.and.right")
+                .font(.title3)
+                .foregroundStyle(.white)
         }
     }
 }

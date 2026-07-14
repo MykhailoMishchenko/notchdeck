@@ -19,10 +19,12 @@ struct WidgetPanelView: View {
 
     private var cardRow: some View {
         GeometryReader { proxy in
-            let totalWeight = max(1, registry.widgets.map(\.expandedWidthWeight).reduce(0, +))
-            let available = proxy.size.width - spacing * CGFloat(max(0, registry.widgets.count - 1))
+            // Widgets with weight 0 opt out of the card row (e.g. the files tray lives in its takeover only).
+            let visible = registry.widgets.filter { $0.expandedWidthWeight > 0 }
+            let totalWeight = max(1, visible.map(\.expandedWidthWeight).reduce(0, +))
+            let available = proxy.size.width - spacing * CGFloat(max(0, visible.count - 1))
             HStack(spacing: spacing) {
-                ForEach(registry.widgets, id: \.id) { widget in
+                ForEach(visible, id: \.id) { widget in
                     WidgetCardView(widget: widget)
                         .frame(width: available * widget.expandedWidthWeight / totalWeight)
                         .onDrag {

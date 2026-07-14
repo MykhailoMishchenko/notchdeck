@@ -3,6 +3,13 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.6.1] — 2026-07-14
+
+### Changed
+- The compact Tray card is removed from the panel row — the slot is freed for a future widget (`expandedWidthWeight == 0` now opts a widget out of the row); the tray is reached via file drags.
+- Tray contents render as a grid of real previews: QuickLook thumbnails for images/previewable files, native macOS icons for folders and other files; hovering softly zooms only the hovered item (spring, 1.15×).
+- AirDrop zone uses Apple's actual AirDrop glyph (from `NSSharingService`), not an SF stand-in.
+
 ## [0.6.0] — 2026-07-14
 
 ### Added
