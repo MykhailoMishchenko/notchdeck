@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.10.2] — 2026-07-14
+
+### Fixed
+- Takeover back button no longer overlaps content: the platform reserves a dedicated left gutter for the chevron instead of overlaying it on the widget's view.
+
 ## [0.10.1] — 2026-07-14
 
 ### Fixed
