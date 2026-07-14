@@ -9,6 +9,9 @@ struct SettingsView: View {
     @State private var loginItemError: String?
     @State private var claudeConnected = ClaudeAuth.isConnected
     @State private var claudeError: String?
+    @State private var crabEnabled = UserDefaults.standard.object(forKey: ClaudeUsageWidget.crabEnabledKey) == nil
+        ? true
+        : UserDefaults.standard.bool(forKey: ClaudeUsageWidget.crabEnabledKey)
 
     var body: some View {
         Form {
@@ -62,6 +65,10 @@ struct SettingsView: View {
                 }
             }
             Section("General") {
+                Toggle("Crab easter egg", isOn: $crabEnabled)
+                    .onChange(of: crabEnabled) { enabled in
+                        UserDefaults.standard.set(enabled, forKey: ClaudeUsageWidget.crabEnabledKey)
+                    }
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { enabled in
                         do {

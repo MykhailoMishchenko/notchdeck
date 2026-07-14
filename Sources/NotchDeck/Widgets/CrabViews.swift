@@ -45,17 +45,20 @@ struct CrabRunView: View {
     var body: some View {
         Group {
             if model.phase != .hidden {
-                ZStack(alignment: .leading) {
+                ZStack(alignment: .bottomLeading) {
                     if model.phase == .leaving {
                         DustPuffsView()
-                            .offset(x: 2, y: 7)
+                            .offset(x: 24, y: -5)
                     }
                     ClaudePixelCrabView(armRaised: model.armRaised)
-                        .frame(width: 26, height: 18)
-                        .offset(x: model.phase == .leaving ? 70 : 6)
+                        .frame(width: 32, height: 21)
+                        // Runs back LEFT — home under the physical notch; dust puffs stay behind him.
+                        .offset(x: model.phase == .leaving ? -70 : 5)
                         .animation(.easeIn(duration: 0.7), value: model.phase == .leaving)
+                        .padding(.bottom, 4)
                 }
-                .frame(width: model.slotWidth, alignment: .leading)
+                .frame(width: model.slotWidth, alignment: .bottomLeading)
+                .frame(maxHeight: .infinity, alignment: .bottom)
                 .clipped()
             }
         }
@@ -115,9 +118,11 @@ struct ClaudePixelCrabView: View {
     var body: some View {
         GeometryReader { proxy in
             let grid = armRaised ? Self.waving : Self.base
-            let cell = min(proxy.size.width / CGFloat(grid[0].count), proxy.size.height / CGFloat(grid.count))
-            let xOffset = (proxy.size.width - cell * CGFloat(grid[0].count)) / 2
-            let yOffset = (proxy.size.height - cell * CGFloat(grid.count)) / 2
+            // Snap cells to device pixels (0.5pt at 2x) — fractional coordinates antialias pixel art into mush.
+            let rawCell = min(proxy.size.width / CGFloat(grid[0].count), proxy.size.height / CGFloat(grid.count))
+            let cell = max(0.5, (rawCell * 2).rounded(.down) / 2)
+            let xOffset = ((proxy.size.width - cell * CGFloat(grid[0].count)) / 2 * 2).rounded() / 2
+            let yOffset = ((proxy.size.height - cell * CGFloat(grid.count)) * 2).rounded() / 2
             Canvas { context, _ in
                 for (rowIndex, row) in grid.enumerated() {
                     for (columnIndex, value) in row.enumerated() where value == 1 {

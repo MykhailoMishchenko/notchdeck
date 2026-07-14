@@ -76,6 +76,18 @@ struct CollapsedWidthPreferenceKey: PreferenceKey {
     }
 }
 
+// inputs {}, does {reports the leading slot group's width (for cutout-centering compensation)}, returns {preference key}
+struct LeadingSlotWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+// inputs {}, does {reports the trailing slot group's width}, returns {preference key}
+struct TrailingSlotWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
 // inputs {state, registry, geometry, hasNotch, expandedSize, slops}, does {renders the self-sizing collapsed strip (with Dynamic-Island widget slots) and the hover-expanded panel with spring animation}, returns {View}
 struct NotchContainerView: View {
     @ObservedObject var state: NotchState
@@ -90,6 +102,8 @@ struct NotchContainerView: View {
     let isDragNear: (CGPoint) -> Bool
 
     @State private var collapsedContentWidth: CGFloat = 0
+    @State private var leadingSlotWidth: CGFloat = 0
+    @State private var trailingSlotWidth: CGFloat = 0
     @State private var stripDropTargeted = false
     @ObservedObject private var dragMonitor = FileDragMonitor.shared
 
@@ -117,6 +131,12 @@ struct NotchContainerView: View {
     private var shape: NotchShape {
         NotchShape(topCornerRadius: geometry.topCornerRadius, bottomCornerRadius: bottomRadius)
     }
+    /// The strip is window-centered, so asymmetric slots would drag the clear gap off the physical
+    /// cutout (content hides under the hardware notch). This shift re-anchors the gap to the cutout:
+    /// the black stretches only toward the heavier side.
+    private var islandOffset: CGFloat {
+        state.expanded ? 0 : (trailingSlotWidth - leadingSlotWidth) / 2
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -141,11 +161,15 @@ struct NotchContainerView: View {
             .frame(width: hoverWidth, height: hoverHeight, alignment: .top)
             .contentShape(Rectangle())
             .onHover { state.setHovering($0) }
+            .offset(x: islandOffset)
             .animation(
                 .spring(response: state.expanded ? 0.38 : 0.30, dampingFraction: 0.78),
                 value: state.expanded
             )
             .animation(.spring(response: 0.30, dampingFraction: 0.80), value: collapsedContentWidth)
+            .animation(.spring(response: 0.30, dampingFraction: 0.80), value: islandOffset)
+            .onPreferenceChange(LeadingSlotWidthKey.self) { leadingSlotWidth = $0 }
+            .onPreferenceChange(TrailingSlotWidthKey.self) { trailingSlotWidth = $0 }
             .animation(.spring(response: 0.28, dampingFraction: 0.75), value: dragNear)
             .onPreferenceChange(CollapsedWidthPreferenceKey.self) { collapsedContentWidth = $0 }
             .onChange(of: stripDropTargeted) { targeted in
@@ -172,10 +196,20 @@ struct NotchContainerView: View {
             HStack(spacing: 0) {
                 ForEach(registry.activeWidgets, id: \.id) { widget in widget.collapsedLeading }
             }
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(key: LeadingSlotWidthKey.self, value: proxy.size.width)
+                }
+            )
             Color.clear.frame(width: collapsedBaseWidth)
             HStack(spacing: 0) {
                 ForEach(registry.activeWidgets, id: \.id) { widget in widget.collapsedTrailing }
             }
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(key: TrailingSlotWidthKey.self, value: proxy.size.width)
+                }
+            )
         }
         .padding(.horizontal, dragMonitor.draggingFiles ? 20 : 0)
         .frame(height: geometry.notchHeight)

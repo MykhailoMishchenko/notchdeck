@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.10.1] — 2026-07-14
+
+### Fixed
+- Asymmetric island slots no longer drag the clear gap off the physical cutout (half the crab hid under the hardware notch): leading/trailing slot widths are measured separately and the island shifts so the black stretches only toward the occupied side.
+- The crab runs back LEFT — home under the physical notch — with the dust trailing behind; sprite is pixel-snapped to device pixels (was antialiased into mush) and stands on the strip's bottom edge.
+
+### Changed
+- Crab cadence: once every 2 hours (busy island retries in 5 minutes); new Settings toggle "Crab easter egg".
+
 ## [0.10.0] — 2026-07-14
 
 ### Added

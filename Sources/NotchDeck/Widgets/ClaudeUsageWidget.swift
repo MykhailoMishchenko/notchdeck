@@ -28,24 +28,39 @@ final class ClaudeUsageWidget: NotchWidget {
     private weak var host: WidgetHost?
     private var crabTimer: Timer?
 
+    static let crabEnabledKey = "dev.notchdeck.crabEnabled"
+
+    /// Settings toggle; default ON.
+    private var crabEnabled: Bool {
+        UserDefaults.standard.object(forKey: Self.crabEnabledKey) == nil
+            ? true
+            : UserDefaults.standard.bool(forKey: Self.crabEnabledKey)
+    }
+
     init() {
-        scheduleCrab(after: 45)
+        scheduleCrab(after: 7200)
     }
 
     func attach(host: WidgetHost) {
         self.host = host
     }
 
-    // inputs {delay}, does {every few minutes, if the island is idle (no music/timer accessories), lets the crab run out and wave}, returns {}
+    // inputs {delay}, does {every 2 hours, if enabled and the island is idle (no music/timer accessories), lets the crab run out and wave; busy island retries in 5 min}, returns {}
     private func scheduleCrab(after delay: TimeInterval) {
         crabTimer?.invalidate()
         crabTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
             guard let self else { return }
-            let islandBusy = (self.host?.collapsedAccessoryWidthExcluding(self.id) ?? 0) > 0
-            if !islandBusy {
-                self.crab.play()
+            guard self.crabEnabled else {
+                self.scheduleCrab(after: 7200)
+                return
             }
-            self.scheduleCrab(after: TimeInterval(Int.random(in: 150...300)))
+            let islandBusy = (self.host?.collapsedAccessoryWidthExcluding(self.id) ?? 0) > 0
+            if islandBusy {
+                self.scheduleCrab(after: 300)
+                return
+            }
+            self.crab.play()
+            self.scheduleCrab(after: 7200)
         }
     }
 
