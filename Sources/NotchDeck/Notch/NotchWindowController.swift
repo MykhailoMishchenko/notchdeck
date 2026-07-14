@@ -89,14 +89,14 @@ final class NotchWindowController {
         return CGRect(x: zone.minX, y: y, width: zone.width, height: zone.height)
     }
 
-    // inputs {}, does {zone in global screen coordinates (bottom-up) for cursor checks}, returns {rect}
+    // inputs {}, does {zone in global screen coordinates (bottom-up) for cursor checks; extends 4pt above the screen edge because the cursor clamps to exactly maxY there and CGRect.contains excludes the top boundary}, returns {rect}
     private func interactiveRectInScreen() -> CGRect {
         let zone = interactiveZoneTopBased()
         return CGRect(
             x: window.frame.minX + zone.minX,
             y: window.frame.maxY - zone.maxY,
             width: zone.width,
-            height: zone.height
+            height: zone.height + 4
         )
     }
 

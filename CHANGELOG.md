@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.2] — 2026-07-14
+
+### Fixed
+- Panel collapsed when the cursor was pushed past the top edge of the screen: macOS clamps the cursor to exactly `maxY` there, and `CGRect.contains` excludes the top boundary. The screen-space zone now extends 4 pt above the edge.
+
 ## [0.5.1] — 2026-07-14
 
 ### Fixed
