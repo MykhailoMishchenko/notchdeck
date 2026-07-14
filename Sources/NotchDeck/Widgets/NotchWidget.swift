@@ -25,6 +25,10 @@ protocol NotchWidget: AnyObject {
     var takeoverView: AnyView { get }
     /// True = the platform routes system file drags to this widget's takeover.
     var acceptsFileDrops: Bool { get }
+    /// Icon for the launcher square (widgets with expandedWidthWeight == 0 appear in the launcher column).
+    var launcherIcon: String { get }
+    /// Optional badge text on the launcher square (e.g. tray file count).
+    var launcherBadge: String? { get }
     /// Called once at registration with the platform handle.
     func attach(host: WidgetHost)
     /// Shown as a card inside the expanded panel.
@@ -51,6 +55,8 @@ extension NotchWidget {
     var expandedWidthWeight: CGFloat { 1 }
     var takeoverView: AnyView { AnyView(EmptyView()) }
     var acceptsFileDrops: Bool { false }
+    var launcherIcon: String { "square.grid.2x2" }
+    var launcherBadge: String? { nil }
     func attach(host: WidgetHost) {}
     var updateInterval: TimeInterval? { nil }
     var holdsExpanded: Bool { false }

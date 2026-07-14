@@ -19,9 +19,11 @@ final class FilesShelfWidget: NotchWidget {
         try? FileManager.default.createDirectory(at: shelfDir, withIntermediateDirectories: true)
     }
 
-    /// 0 = no card in the panel row: the slot is reserved for a future widget; the tray is reached via file drags.
+    /// 0 = no card in the panel row: the tray lives in its takeover, opened from the launcher square or a file drag.
     var expandedWidthWeight: CGFloat { 0 }
     var acceptsFileDrops: Bool { true }
+    var launcherIcon: String { "tray.full" }
+    var launcherBadge: String? { model.files.isEmpty ? nil : "\(model.files.count)" }
 
     func attach(host: WidgetHost) {
         self.host = host

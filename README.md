@@ -41,7 +41,7 @@ swift run NotchDeck          # dev run
 - [x] 0.4.0 — Apple Music playlist picker in the media widget
 - [x] 0.5.0 — Dynamic Island: album art + equalizer in the collapsed notch, artwork card, swipe-back picker
 - [x] 0.6.0 — file drag & drop: strip hint on system drags, Files Tray + AirDrop takeover zones
-- [ ] 0.7.0 — settings: widget toggles, launch at login
+- [x] 0.7.0 — launcher column, settings (widget toggles), launch at login
 - [ ] 0.8.0 — extension point for external-process widgets (XPC) + integration docs
 
 Versioning: the single source of truth is the [`VERSION`](VERSION) file; releases are tagged `vX.Y.Z`, history lives in [CHANGELOG.md](CHANGELOG.md).

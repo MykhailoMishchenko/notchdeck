@@ -156,11 +156,11 @@ struct NotchContainerView: View {
     private var collapsedStrip: some View {
         HStack(spacing: 0) {
             HStack(spacing: 0) {
-                ForEach(registry.widgets, id: \.id) { widget in widget.collapsedLeading }
+                ForEach(registry.activeWidgets, id: \.id) { widget in widget.collapsedLeading }
             }
             Color.clear.frame(width: collapsedBaseWidth)
             HStack(spacing: 0) {
-                ForEach(registry.widgets, id: \.id) { widget in widget.collapsedTrailing }
+                ForEach(registry.activeWidgets, id: \.id) { widget in widget.collapsedTrailing }
             }
         }
         .padding(.horizontal, dragMonitor.draggingFiles ? 20 : 0)

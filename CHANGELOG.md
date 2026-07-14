@@ -3,6 +3,12 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.7.0] — 2026-07-14
+
+### Added
+- **Launcher column** in the center of the panel: small icon squares for every card-less widget (currently the Tray, with a file-count badge) plus a Settings gear. Clicking a square opens that widget's takeover — the tray/AirDrop zones are one click away again.
+- **Settings window**: enable/disable each widget (persisted; disabled widgets leave the panel, the launcher, the collapsed slots and stop polling) and **Launch at login** via `SMAppService`. Quit lives here too.
+
 ## [0.6.1] — 2026-07-14
 
 ### Changed
