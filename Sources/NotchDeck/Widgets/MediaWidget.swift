@@ -9,6 +9,7 @@ final class MediaModel: ObservableObject {
     @Published var isPlaying = false
     @Published var source: String?
     @Published var artwork: NSImage?
+    @Published var islandVisible = false
     @Published var pickerVisible = false
     @Published var loadingPlaylists = false
     @Published var playlists: [String] = []
@@ -22,6 +23,7 @@ final class MediaWidget: NotchWidget {
     let displayName = "Media"
     private let model = MediaModel()
     private var artworkKey = ""
+    private var hideIslandWork: DispatchWorkItem?
 
     init() {
         let center = DistributedNotificationCenter.default()
@@ -48,7 +50,7 @@ final class MediaWidget: NotchWidget {
 
     var collapsedLeading: AnyView { AnyView(MediaCollapsedArtView(model: model)) }
     var collapsedTrailing: AnyView { AnyView(MediaCollapsedBarsView(model: model)) }
-    var collapsedAccessoryWidth: CGFloat { model.hasTrack ? 72 : 0 }
+    var collapsedAccessoryWidth: CGFloat { model.islandVisible ? 72 : 0 }
     var expandedWidthWeight: CGFloat { 1.5 }
 
     func onAppear() {
@@ -67,7 +69,26 @@ final class MediaWidget: NotchWidget {
             if model.isPlaying { model.pickerVisible = false }
             Log.info("media push: \(model.source ?? "?") \(model.isPlaying ? "playing" : "paused") \(model.track)")
             fetchArtwork()
+            updateIslandVisibility()
         }
+    }
+
+    // inputs {}, does {island shows while playing; on pause it stays for 60s then hides; resume cancels the hide}, returns {}
+    private func updateIslandVisibility() {
+        hideIslandWork?.cancel()
+        hideIslandWork = nil
+        guard model.hasTrack else {
+            model.islandVisible = false
+            return
+        }
+        model.islandVisible = true
+        guard !model.isPlaying else { return }
+        let work = DispatchWorkItem { [weak self] in
+            self?.model.islandVisible = false
+            Log.info("media: island hidden after 60s pause")
+        }
+        hideIslandWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60, execute: work)
     }
 
     // inputs {}, does {shows/hides the Apple Music playlist picker; loads playlist names on first open}, returns {}
@@ -171,6 +192,7 @@ final class MediaWidget: NotchWidget {
                 self.model.artist = parts[2]
                 self.model.album = parts[3]
                 self.fetchArtwork()
+                self.updateIslandVisibility()
             }
         }
     }

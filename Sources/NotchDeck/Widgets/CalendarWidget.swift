@@ -106,6 +106,7 @@ struct CalendarCardView: View {
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.5))
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(model.events) { event in
@@ -127,9 +128,9 @@ struct CalendarCardView: View {
                     }
                     Spacer(minLength: 0)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
         .padding(8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

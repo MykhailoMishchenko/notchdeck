@@ -195,7 +195,7 @@ struct MediaCollapsedArtView: View {
 
     var body: some View {
         Group {
-            if model.hasTrack {
+            if model.islandVisible {
                 Group {
                     if let artwork = model.artwork {
                         Image(nsImage: artwork)
@@ -218,7 +218,7 @@ struct MediaCollapsedArtView: View {
                 .transition(.opacity)
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: model.hasTrack)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: model.islandVisible)
     }
 }
 
@@ -228,7 +228,7 @@ struct MediaCollapsedBarsView: View {
 
     var body: some View {
         Group {
-            if model.hasTrack {
+            if model.islandVisible {
                 EqualizerBarsView(animating: model.isPlaying)
                     .frame(width: 14, height: 14)
                     .padding(.leading, 6)
@@ -236,7 +236,7 @@ struct MediaCollapsedBarsView: View {
                     .transition(.opacity)
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: model.hasTrack)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: model.islandVisible)
     }
 }
 

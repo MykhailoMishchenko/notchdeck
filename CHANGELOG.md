@@ -3,6 +3,14 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.4] — 2026-07-14
+
+### Fixed
+- Empty calendar card ("No events today") is centered again — it inherited the events list's top-leading alignment.
+
+### Changed
+- The island hides 60 s after playback is paused and reappears instantly on resume (or on any track change).
+
 ## [0.5.3] — 2026-07-14
 
 ### Changed
