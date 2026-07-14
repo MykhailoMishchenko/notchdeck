@@ -3,6 +3,14 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.11.1] — 2026-07-14
+
+### Added
+- Distributable **DMG** (`scripts/dmg.sh`: release build + /Applications shortcut, UDZO), attached to GitHub releases from now on.
+
+### Changed
+- README rewritten to match the shipped product: Dynamic Island, all six widgets, file-buffer semantics, fan control, install instructions (DMG + Gatekeeper note + permissions), build-from-source, updated roadmap.
+
 ## [0.11.0] — 2026-07-14
 
 ### Added

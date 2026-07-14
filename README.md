@@ -4,48 +4,43 @@
 
 ![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-black)
 ![Swift](https://img.shields.io/badge/Swift-5.10-orange)
-![Version](https://img.shields.io/badge/version-0.5.0-blue)
+![Version](https://img.shields.io/badge/version-0.11.1-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
-- **Hover panel at the notch** — spring-animated expansion on hover, with a trigger zone larger than the visible shape (reacts as the cursor approaches), and snappy collapse when the cursor leaves.
-- **Stays out of the system's way** — clicks pass through the invisible part of the window: the menu bar remains fully usable, and the panel never steals focus from the active app.
-- **External monitors** — on displays without a notch the panel becomes a compact pill at the top edge. Multi-monitor works out of the box, including hot plug/unplug.
-- **Pixel-accurate geometry** — the cutout is detected at runtime via `NSScreen` and the shape is fitted precisely. Calibration verified on a real MacBook Pro 16" M1 Pro 2021.
-- **Works everywhere** — across all Spaces and on top of fullscreen apps.
+**Dynamic Island.** While music plays, the collapsed notch stretches to show the album cover and live equalizer bars; a running timer shows an orange progress ring and the remaining time. When the island is idle, Claude's pixel crab occasionally runs out, waves at you and dashes back under the notch.
 
-## A modular platform
+**Widgets** (hover the notch to expand the panel):
+- **Media** — cover art, track / album / artist and transport for Spotify and Apple Music (true push via player broadcasts); when nothing plays, pick any playlist from your Apple Music library right in the notch.
+- **Calendar** — today's upcoming events with their real calendar colors (EventKit).
+- **Files buffer** — drag any file or folder onto the notch: the strip reaches out toward your drag and opens a tray. Cut semantics: the file *moves* into the buffer (survives app restarts), drag it out into a folder to move it there, or into an app (Telegram, a browser) to share while it stays in the buffer. Deletions go to the system Trash.
+- **Fans** — live RPM and CPU/GPU temperatures via user-space SMC reads, plus real **fan speed control** through an embedded privileged helper: per-fan sliders and an Auto button. The helper only ever touches fan keys, clamps to each fan's safe range and hands fans back to the SMC if the app dies.
+- **Claude limits** — your actual plan usage, same numbers as Claude Code's `/usage`: session and weekly limits with progress bars and reset times, via your local Claude Code sign-in (the token is never stored or logged).
+- **Timer** — presets, start/pause/reset, chime on finish; lives in the island while running.
 
-NotchDeck is not a monolith — it is a platform with a widget system: a new widget is just an implementation of the `NotchWidget` protocol plus one registration line, with zero changes to the core. The MVP roadmap includes three widgets (media controls, a files shelf with AirDrop, calendar) and an extension point for external modules backed by privileged daemons (sensor/fan monitoring over XPC). See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
+**Platform.** Widgets are plugins: card row with drag & drop reorder, full-panel takeovers with universal back navigation (chevron or right-swipe), a launcher grid of compact squares, per-widget toggles in Settings, launch at login. Works across Spaces, above fullscreen apps, multi-monitor with a pill fallback on notchless displays.
 
-## Requirements
+## Install
 
-- macOS 13+
-- A MacBook Pro with a notch for notch mode (16" M1 Pro 2021 is the reference; other models via runtime detection), or any Mac for pill mode
+1. Download `NotchDeck-<version>.dmg` from [Releases](https://github.com/MykhailoMishchenko/notchdeck/releases), open it and drag **NotchDeck** to **Applications**.
+2. The build is not notarized yet — on first run macOS will complain. Either right-click → Open → Open, or:
+   ```bash
+   xattr -d com.apple.quarantine /Applications/NotchDeck.app
+   ```
+3. Grant what you use: Calendar access (calendar widget), Apple Events (media controls), Keychain read (Claude limits — Connect in Settings), and approve the fan helper in System Settings → Login Items (fan control — Enable in Settings).
 
-## Build & run
+## Build from source
 
 ```bash
 git clone https://github.com/MykhailoMishchenko/notchdeck.git
 cd notchdeck
-swift run NotchDeck          # dev run
+swift run NotchDeck          # dev run (no TCC-gated widgets)
 ./scripts/bundle.sh release  # build NotchDeck.app
+./scripts/dmg.sh             # build the distributable DMG
 ```
 
-## Roadmap
-
-- [x] 0.1.0 — notch window core: hover expand/collapse, pill fallback, multi-monitor
-- [x] 0.2.0 — widget system: `NotchWidget` protocol, registry, push/poll updates, reorder
-- [x] 0.3.0 — widgets: media controls, files shelf (drag & drop + AirDrop), calendar
-- [x] 0.4.0 — Apple Music playlist picker in the media widget
-- [x] 0.5.0 — Dynamic Island: album art + equalizer in the collapsed notch, artwork card, swipe-back picker
-- [x] 0.6.0 — file drag & drop: strip hint on system drags, Files Tray + AirDrop takeover zones
-- [x] 0.7.0 — launcher column, settings (widget toggles), launch at login
-- [x] 0.8.0 — Fans widget (SMC monitor, XPC control mount point), Claude usage widget, extension docs
-- [x] 0.11.0 — fan CONTROL: embedded privileged XPC helper, per-fan sliders + Auto, crash-safe revert
-
-Versioning: the single source of truth is the [`VERSION`](VERSION) file; releases are tagged `vX.Y.Z`, history lives in [CHANGELOG.md](CHANGELOG.md).
+Requirements: macOS 13+, a notched MacBook for notch mode (16" M1 Pro 2021 is the reference; other models via runtime detection) or any Mac for pill mode.
 
 ## Extending NotchDeck
 
@@ -62,7 +57,17 @@ final class MyWidget: NotchWidget {
 registry.register(MyWidget())
 ```
 
-The protocol also gives you collapsed Dynamic-Island slots, poll scheduling, a live-lock, full-panel takeovers and a Settings toggle — all for free. Widgets backed by **external processes** are first-class: the Claude widget wraps a CLI, and the fan widget is the designated mount point for a future privileged XPC helper that will add fan *control* on top of today's monitoring. See [ARCHITECTURE.md](ARCHITECTURE.md), Stage 4.
+The protocol also gives you collapsed Dynamic-Island slots, poll scheduling, a live-lock, full-panel takeovers and a Settings toggle — all for free. Widgets backed by **external processes** are first-class: the Claude widget talks to Anthropic's API with local credentials, and the Fans widget drives a root XPC helper embedded in the same bundle. See [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Roadmap
+
+Everything from the original MVP spec has shipped (window core → widget platform → media/files/calendar → settings → fan control). On the list:
+
+- [ ] stable code signing + notarization (kills the TCC/Keychain/daemon re-approval pain and the Gatekeeper warning)
+- [ ] AirDrop drop zone (parked: NSHostingView drag-routing conflict)
+- [ ] more widgets — the platform is open
+
+Versioning: the single source of truth is the [`VERSION`](VERSION) file; releases are tagged `vX.Y.Z`, history lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
