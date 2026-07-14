@@ -34,6 +34,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>NotchDeck shows your next calendar event in the notch panel.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>NotchDeck shows your next calendar event in the notch panel.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>NotchDeck controls playback in Spotify and Music.</string>
 </dict>
 </plist>
 PLIST

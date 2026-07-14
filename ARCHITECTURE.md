@@ -67,7 +67,23 @@ Everything except `id`, `displayName`, `expandedView` has a default via a protoc
 - **Live-lock**: `holdsExpanded` is *pulled* at collapse-decision time. If any visible widget holds, the collapse attempt re-schedules itself every 1 s until released (or until the cursor returns). Pull keeps the protocol passive — no callback plumbing into widgets. This is the temperature-sensor case: the panel stays open while a live reading is being rendered.
 
 ### Panel UI
-- `WidgetPanelView` (header + cards) is the only view that knows about the registry; `WidgetCardView` provides uniform card chrome around each widget's `expandedView`.
+- `WidgetPanelView` is the only view that knows about the registry; `WidgetCardView` provides uniform card chrome around each widget's `expandedView`.
+
+## Stage 3 — MVP widgets (implemented)
+
+Three widgets, each exercising a different integration type. Each touches the core in exactly one line (`registry.register(...)` in `AppDelegate`) — the extensibility claim holds.
+
+| Widget | Type | Integration |
+|---|---|---|
+| `MediaWidget` | push | `DistributedNotificationCenter` (`com.spotify.client.PlaybackStateChanged`, `com.apple.Music.playerInfo`) for state; AppleScript for play/pause/skip; one AppleScript pull on appear for initial state |
+| `FilesShelfWidget` | filesystem / share | `onDrop` of `fileURL` → copy into temp shelf dir; `NSSharingService(.sendViaAirDrop)`; clear deletes temp copies |
+| `CalendarWidget` | poll (30 s) | EventKit next-event within 24 h + clock; graceful denied state |
+
+Decisions & lessons:
+- **Why not `MPNowPlayingInfoCenter`**: it only reflects the app's *own* playback; the system-wide MediaRemote API is private and Apple gated it behind an entitlement in macOS 15.4+. Player-broadcast notifications + AppleScript are the honest public route (covers Spotify and Apple Music).
+- **Apple Events never run on the main thread**: a synchronous `NSAppleScript` triggered a TCC prompt that froze the entire UI before first render. All script calls go through a background queue; results publish back on main.
+- **TCC in dev runs**: the bare SPM binary embeds an Info.plist (`-sectcreate __TEXT __info_plist`) with usage descriptions so calendar/Apple Events prompts work without the .app bundle; `bundle.sh` carries the same keys.
+- `PlaceholderWidget` is kept as the minimal reference implementation of the protocol.
 
 ## Build
 

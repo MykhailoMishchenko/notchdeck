@@ -7,44 +7,24 @@ struct WidgetPanelView: View {
     @State private var draggedId: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
-            HStack(spacing: 10) {
-                ForEach(registry.widgets, id: \.id) { widget in
-                    WidgetCardView(widget: widget)
-                        .onDrag {
-                            draggedId = widget.id
-                            return NSItemProvider(object: widget.id as NSString)
-                        }
-                        .onDrop(
-                            of: [.text],
-                            delegate: WidgetReorderDelegate(
-                                targetId: widget.id,
-                                draggedId: $draggedId,
-                                registry: registry
-                            )
+        HStack(spacing: 10) {
+            ForEach(registry.widgets, id: \.id) { widget in
+                WidgetCardView(widget: widget)
+                    .onDrag {
+                        draggedId = widget.id
+                        return NSItemProvider(object: widget.id as NSString)
+                    }
+                    .onDrop(
+                        of: [.text],
+                        delegate: WidgetReorderDelegate(
+                            targetId: widget.id,
+                            draggedId: $draggedId,
+                            registry: registry
                         )
-                }
+                    )
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private var header: some View {
-        HStack {
-            Text("NotchDeck")
-                .font(.headline)
-                .foregroundStyle(.white)
-            Spacer()
-            Button {
-                NSApp.terminate(nil)
-            } label: {
-                Image(systemName: "power")
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            .buttonStyle(.plain)
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

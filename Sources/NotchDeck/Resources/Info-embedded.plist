@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>dev.notchdeck.app</string>
+    <key>CFBundleName</key>
+    <string>NotchDeck</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>NotchDeck shows your next calendar event in the notch panel.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>NotchDeck shows your next calendar event in the notch panel.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>NotchDeck controls playback in Spotify and Music.</string>
+</dict>
+</plist>

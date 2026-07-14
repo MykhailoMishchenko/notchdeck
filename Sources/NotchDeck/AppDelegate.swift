@@ -20,11 +20,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildControllers()
     }
 
-    // inputs {}, does {registers the widget set (placeholders until 0.3.0 real widgets land)}, returns {}
+    // inputs {}, does {registers the MVP widget set — the only place a new widget touches outside its own file}, returns {}
     private func registerWidgets() {
-        registry.register(PlaceholderWidget(id: "demo.music", displayName: "Music", icon: "music.note"))
-        registry.register(PlaceholderWidget(id: "demo.files", displayName: "Files", icon: "tray.full"))
-        registry.register(PlaceholderWidget(id: "demo.calendar", displayName: "Calendar", icon: "calendar"))
+        registry.register(MediaWidget())
+        registry.register(FilesShelfWidget())
+        registry.register(CalendarWidget())
     }
 
     // inputs {}, does {diffs current screens vs controllers: tears down removed, creates added, rebuilds geometry-changed}, returns {}
