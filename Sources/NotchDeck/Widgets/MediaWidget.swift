@@ -51,7 +51,7 @@ final class MediaWidget: NotchWidget {
     var collapsedLeading: AnyView { AnyView(MediaCollapsedArtView(model: model)) }
     var collapsedTrailing: AnyView { AnyView(MediaCollapsedBarsView(model: model)) }
     var collapsedAccessoryWidth: CGFloat { model.islandVisible ? 72 : 0 }
-    var expandedWidthWeight: CGFloat { 1.5 }
+    var expandedWidthWeight: CGFloat { 1.7 }
 
     func onAppear() {
         refreshFromRunningPlayer()

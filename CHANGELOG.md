@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.8] — 2026-07-14
+
+### Fixed
+- Cards painted over each other: the media card's minimum content width (96 pt cover + transport row) exceeded its allocated share and spilled over the neighbor. Media share raised to 1.7×, and every card is now clipped by the platform so no widget can ever overflow onto another.
+
 ## [0.5.7] — 2026-07-14
 
 ### Changed

@@ -45,6 +45,8 @@ struct WidgetCardView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.white.opacity(0.07))
             )
+            // A widget whose min content width exceeds its share must never paint over the neighbor card.
+            .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
