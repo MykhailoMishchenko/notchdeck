@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.6] — 2026-07-14
+
+### Fixed
+- Player text + controls are a compact group vertically centered against the cover (was stretched: title pinned top, controls pinned bottom).
+
 ## [0.5.5] — 2026-07-14
 
 ### Changed

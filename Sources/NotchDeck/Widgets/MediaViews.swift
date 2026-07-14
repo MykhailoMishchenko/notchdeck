@@ -82,9 +82,9 @@ struct MediaCardView: View {
 
     /// Reference layout: big art with a source badge on the left; title / album / artist and transport on the right.
     private var nowPlaying: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             artworkThumb
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(model.track)
                     .font(.callout.weight(.bold))
                     .foregroundStyle(.white)
@@ -97,12 +97,12 @@ struct MediaCardView: View {
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.4))
                     .lineLimit(1)
-                Spacer(minLength: 4)
                 HStack(spacing: 14) {
                     controlButton("backward.end.fill") { onCommand("previous track") }
                     controlButton(model.isPlaying ? "pause.fill" : "play.fill") { onCommand("playpause") }
                     controlButton("forward.end.fill") { onCommand("next track") }
                 }
+                .padding(.top, 6)
             }
             Spacer(minLength: 0)
         }
