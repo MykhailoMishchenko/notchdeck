@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.7.5] — 2026-07-14
+
+### Changed
+- Buffer semantics for drag-out: dropping into **Finder** (a folder or the Desktop) moves the item out of the tray; dropping into **any app** (Telegram, a browser...) shares it and the item stays. The destination is identified by the app owning the window under the drop point (`CGWindowList`, no extra permissions). Dropping INTO the tray still copies — originals are never touched.
+
 ## [0.7.4] — 2026-07-14
 
 ### Fixed

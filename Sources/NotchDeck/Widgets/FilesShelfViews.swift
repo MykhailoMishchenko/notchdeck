@@ -231,10 +231,39 @@ struct DragOutSourceView: NSViewRepresentable {
             context == .outsideApplication ? .copy : []
         }
 
+        // Buffer semantics: dropping into Finder (a folder / the Desktop) MOVES the item out of the tray;
+        // dropping into any app (Telegram, a browser...) SHARES it — the item stays.
         func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
             guard !operation.isEmpty else { return }
-            Log.info("shelf: item dragged out, operation=\(operation.rawValue)")
+            let finderDestination = Self.isFinderDestination(at: screenPoint)
+            Log.info("shelf: drag-out accepted, destination=\(finderDestination ? "finder (move)" : "app (keep)")")
+            guard finderDestination else { return }
             DispatchQueue.main.async { [onDraggedOut] in onDraggedOut() }
+        }
+
+        // inputs {cocoa screen point}, does {finds the app owning the topmost normal window under the drop point; no window = Desktop}, returns {true when the destination is Finder/Desktop}
+        private static func isFinderDestination(at cocoaPoint: NSPoint) -> Bool {
+            let cgPoint = CGPoint(
+                x: cocoaPoint.x,
+                y: CGDisplayBounds(CGMainDisplayID()).height - cocoaPoint.y
+            )
+            guard let windows = CGWindowListCopyWindowInfo(
+                [.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID
+            ) as? [[String: Any]] else { return false }
+            let ownPid = Int(ProcessInfo.processInfo.processIdentifier)
+            for entry in windows {
+                guard
+                    let pid = entry[kCGWindowOwnerPID as String] as? Int, pid != ownPid,
+                    let layer = entry[kCGWindowLayer as String] as? Int, layer == 0,
+                    let boundsDict = entry[kCGWindowBounds as String] as? NSDictionary,
+                    let rect = CGRect(dictionaryRepresentation: boundsDict as CFDictionary),
+                    rect.contains(cgPoint)
+                else { continue }
+                let bundleId = NSRunningApplication(processIdentifier: pid_t(pid))?.bundleIdentifier
+                return bundleId == "com.apple.finder"
+            }
+            // No normal window under the point — the drop landed on the Desktop (Finder territory).
+            return true
         }
     }
 }
