@@ -100,19 +100,6 @@ final class NotchWindowController {
         )
     }
 
-    // inputs {}, does {softens the system's abrupt re-composite after a Space switch: fade in ONLY when the window is not yet composited — blanking an already-visible window causes a blink}, returns {}
-    func fadeInAfterSpaceSwitch() {
-        let visible = window.occlusionState.contains(.visible)
-        Log.info("space switch: window occlusion visible=\(visible)")
-        guard !visible else { return }
-        window.alphaValue = 0
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.30
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            window.animator().alphaValue = 1
-        }
-    }
-
     // inputs {}, does {closes and releases the window (screen disconnected)}, returns {}
     func tearDown() {
         window.close()

@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.12] — 2026-07-14
+
+### Changed
+- Space-switch fade removed entirely: WindowServer composites all-Spaces windows only at the end of the swipe, occlusion state lags, and there is no public "space will change" event — every client-side smoothing runs after the system pop and reads as a blink. Native single pop restored (same behavior as NotchNook and the menu bar). Documented in code.
+
 ## [0.5.11] — 2026-07-14
 
 ### Fixed

@@ -14,17 +14,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(spaceChanged),
-            name: NSWorkspace.activeSpaceDidChangeNotification,
-            object: nil
-        )
     }
-
-    @objc private func spaceChanged() {
-        controllers.values.forEach { $0.fadeInAfterSpaceSwitch() }
-    }
+    // NOTE: no Space-switch handling on purpose. The system composites all-Spaces windows
+    // only at the END of the swipe (single pop, same as NotchNook). There is no public
+    // "space WILL change" event, so any client-side fade runs after the pop and reads
+    // as a blink. Tried and reverted in 0.5.10–0.5.12.
 
     @objc private func screensChanged() {
         rebuildControllers()
