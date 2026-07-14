@@ -7,6 +7,8 @@ struct SettingsView: View {
     @ObservedObject var registry: WidgetRegistry
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginItemError: String?
+    @State private var claudeConnected = ClaudeAuth.isConnected
+    @State private var claudeError: String?
 
     var body: some View {
         Form {
@@ -16,6 +18,47 @@ struct SettingsView: View {
                         get: { !registry.disabledIds.contains(widget.id) },
                         set: { registry.setEnabled(widget.id, $0) }
                     ))
+                }
+            }
+            Section("Claude") {
+                if claudeConnected {
+                    HStack {
+                        Text("Connected")
+                            .foregroundStyle(.secondary)
+                        if let plan = ClaudeAuth.plan {
+                            Text(plan)
+                                .font(.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(.orange.opacity(0.2)))
+                        }
+                        Spacer()
+                        Button("Disconnect") {
+                            ClaudeAuth.disconnect()
+                            claudeConnected = false
+                        }
+                    }
+                } else {
+                    HStack {
+                        Text("Show your plan limits in the notch")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Connect") {
+                            switch ClaudeAuth.connect() {
+                            case .success:
+                                claudeConnected = true
+                                claudeError = nil
+                            case .failure(let error):
+                                claudeError = error.message
+                            }
+                        }
+                    }
+                    if let claudeError {
+                        Text(claudeError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 }
             }
             Section("General") {

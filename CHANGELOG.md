@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.9.0] — 2026-07-14
+
+### Changed
+- Claude widget shows the REAL plan limits — the same numbers as Claude Code's `/usage` screen: plan name, Current session %, weekly All models %, weekly per-model % (e.g. Fable), each with a progress bar and reset time, from Anthropic's OAuth usage endpoint via the LOCAL Claude Code token (60 s refresh). The ccusage cost-estimate approach is gone.
+
+### Added
+- **Connect Claude** in Settings: verifies local Claude Code credentials (`~/.claude/.credentials.json`, falling back to the Keychain item — the macOS consent prompt is the confirmation). Works on any Mac with Claude Code signed in. Security: NotchDeck never stores or logs the token — it is read on demand per request and only the plan NAME is persisted; traffic goes exclusively to api.anthropic.com over HTTPS.
+- Until connected, the widget shows Claude's pixel crab mascot with a hint.
+
 ## [0.8.0] — 2026-07-14
 
 ### Added
