@@ -6,25 +6,31 @@ struct WidgetPanelView: View {
     @ObservedObject var registry: WidgetRegistry
     @State private var draggedId: String?
 
+    private let spacing: CGFloat = 10
+
     var body: some View {
-        HStack(spacing: 10) {
-            ForEach(registry.widgets, id: \.id) { widget in
-                WidgetCardView(widget: widget)
-                    .onDrag {
-                        draggedId = widget.id
-                        return NSItemProvider(object: widget.id as NSString)
-                    }
-                    .onDrop(
-                        of: [.text],
-                        delegate: WidgetReorderDelegate(
-                            targetId: widget.id,
-                            draggedId: $draggedId,
-                            registry: registry
+        GeometryReader { proxy in
+            let totalWeight = max(1, registry.widgets.map(\.expandedWidthWeight).reduce(0, +))
+            let available = proxy.size.width - spacing * CGFloat(max(0, registry.widgets.count - 1))
+            HStack(spacing: spacing) {
+                ForEach(registry.widgets, id: \.id) { widget in
+                    WidgetCardView(widget: widget)
+                        .frame(width: available * widget.expandedWidthWeight / totalWeight)
+                        .onDrag {
+                            draggedId = widget.id
+                            return NSItemProvider(object: widget.id as NSString)
+                        }
+                        .onDrop(
+                            of: [.text],
+                            delegate: WidgetReorderDelegate(
+                                targetId: widget.id,
+                                draggedId: $draggedId,
+                                registry: registry
+                            )
                         )
-                    )
+                }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

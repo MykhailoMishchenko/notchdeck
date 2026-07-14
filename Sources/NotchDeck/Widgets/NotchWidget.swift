@@ -13,6 +13,8 @@ protocol NotchWidget: AnyObject {
     var collapsedTrailing: AnyView { get }
     /// Current total width of both collapsed slots (0 = inactive); pulled by the platform for hover/hit-zone math.
     var collapsedAccessoryWidth: CGFloat { get }
+    /// Relative width of the widget's card in the expanded panel (1 = equal share).
+    var expandedWidthWeight: CGFloat { get }
     /// Shown as a card inside the expanded panel.
     var expandedView: AnyView { get }
     /// nil = push-based (widget publishes its own updates); otherwise the platform
@@ -34,6 +36,7 @@ extension NotchWidget {
     var collapsedLeading: AnyView { AnyView(EmptyView()) }
     var collapsedTrailing: AnyView { AnyView(EmptyView()) }
     var collapsedAccessoryWidth: CGFloat { 0 }
+    var expandedWidthWeight: CGFloat { 1 }
     var updateInterval: TimeInterval? { nil }
     var holdsExpanded: Bool { false }
     func refresh() {}

@@ -80,55 +80,87 @@ struct MediaCardView: View {
         )
     }
 
+    /// Reference layout: big art with a source badge on the left; title / album / artist and transport on the right.
     private var nowPlaying: some View {
-        ZStack {
-            if let artwork = model.artwork {
-                GeometryReader { proxy in
-                    Image(nsImage: artwork)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .clipped()
-                }
-            } else {
-                LinearGradient(colors: [.gray.opacity(0.35), .black], startPoint: .top, endPoint: .bottom)
-                Image(systemName: "music.note")
-                    .font(.title2)
-                    .foregroundStyle(.white.opacity(0.35))
-            }
-            VStack {
-                HStack {
-                    Spacer()
-                    Button(action: onTogglePicker) {
-                        Image(systemName: "music.note.list")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.85))
-                            .padding(4)
-                            .background(Circle().fill(.black.opacity(0.45)))
-                    }
-                    .buttonStyle(.plain)
-                }
-                Spacer()
-                HStack(spacing: 18) {
+        HStack(spacing: 12) {
+            artworkThumb
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.track)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text(model.album)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.65))
+                    .lineLimit(1)
+                Text(model.artist)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.4))
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                HStack(spacing: 16) {
                     controlButton("backward.fill") { onCommand("previous track") }
                     controlButton(model.isPlaying ? "pause.fill" : "play.fill") { onCommand("playpause") }
                     controlButton("forward.fill") { onCommand("next track") }
                 }
-                .padding(.vertical, 5)
-                .frame(maxWidth: .infinity)
-                .background(
-                    LinearGradient(colors: [.black.opacity(0.65), .black.opacity(0)], startPoint: .bottom, endPoint: .top)
-                )
             }
-            .padding(4)
+            Spacer(minLength: 0)
         }
+        .padding(10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .overlay(alignment: .topTrailing) {
+            Button(action: onTogglePicker) {
+                Image(systemName: "music.note.list")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .buttonStyle(.plain)
+            .padding(6)
+        }
+    }
+
+    private var artworkThumb: some View {
+        Group {
+            if let artwork = model.artwork {
+                Image(nsImage: artwork)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(.white.opacity(0.1))
+                    .overlay(
+                        Image(systemName: "music.note")
+                            .font(.title3)
+                            .foregroundStyle(.white.opacity(0.4))
+                    )
+            }
+        }
+        .frame(width: 88, height: 88)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "music.note")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 18, height: 18)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(model.source == "Spotify"
+                            ? Color(red: 0.11, green: 0.73, blue: 0.33)
+                            : Color(red: 0.98, green: 0.18, blue: 0.28))
+                )
+                .offset(x: 5, y: 5)
+        }
+        .padding(.bottom, 5)
+        .padding(.trailing, 5)
     }
 
     private func controlButton(_ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 12))
+                .font(.system(size: 13))
                 .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(.white.opacity(0.08)))
         }
         .buttonStyle(.plain)
     }

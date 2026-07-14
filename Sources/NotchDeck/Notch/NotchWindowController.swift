@@ -9,7 +9,7 @@ final class NotchWindowController {
     let state = NotchState()
 
     private let window: NotchWindow
-    private let expandedSize = CGSize(width: 440, height: 160)
+    private let expandedSize = CGSize(width: 520, height: 170)
     /// Hover trigger margins around the collapsed notch — bigger than the shape so expansion starts "на подлёте".
     private let collapsedSlopX: CGFloat = 14
     private let collapsedSlopY: CGFloat = 8

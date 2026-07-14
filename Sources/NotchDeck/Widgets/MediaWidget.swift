@@ -5,6 +5,7 @@ import SwiftUI
 final class MediaModel: ObservableObject {
     @Published var track = ""
     @Published var artist = ""
+    @Published var album = ""
     @Published var isPlaying = false
     @Published var source: String?
     @Published var artwork: NSImage?
@@ -32,6 +33,8 @@ final class MediaWidget: NotchWidget {
             self, selector: #selector(playbackChanged(_:)),
             name: Notification.Name("com.apple.Music.playerInfo"), object: nil
         )
+        // Island must light up on launch when something is already playing — don't wait for the first expand.
+        refreshFromRunningPlayer()
     }
 
     var expandedView: AnyView {
@@ -46,6 +49,7 @@ final class MediaWidget: NotchWidget {
     var collapsedLeading: AnyView { AnyView(MediaCollapsedArtView(model: model)) }
     var collapsedTrailing: AnyView { AnyView(MediaCollapsedBarsView(model: model)) }
     var collapsedAccessoryWidth: CGFloat { model.hasTrack ? 72 : 0 }
+    var expandedWidthWeight: CGFloat { 2 }
 
     func onAppear() {
         refreshFromRunningPlayer()
@@ -58,6 +62,7 @@ final class MediaWidget: NotchWidget {
             model.source = notification.name.rawValue.contains("spotify") ? "Spotify" : "Music"
             model.track = info?["Name"] as? String ?? ""
             model.artist = info?["Artist"] as? String ?? ""
+            model.album = info?["Album"] as? String ?? ""
             model.isPlaying = (info?["Player State"] as? String) == "Playing"
             if model.isPlaying { model.pickerVisible = false }
             Log.info("media push: \(model.source ?? "?") \(model.isPlaying ? "playing" : "paused") \(model.track)")
@@ -150,7 +155,7 @@ final class MediaWidget: NotchWidget {
         let script = """
         tell application "\(player)"
             if player state is playing or player state is paused then
-                return (player state as string) & "|" & (name of current track) & "|" & (artist of current track)
+                return (player state as string) & "|" & (name of current track) & "|" & (artist of current track) & "|" & (album of current track)
             end if
             return ""
         end tell
@@ -158,12 +163,13 @@ final class MediaWidget: NotchWidget {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self, let result = self.runScript(script)?.stringValue, !result.isEmpty else { return }
             let parts = result.components(separatedBy: "|")
-            guard parts.count == 3 else { return }
+            guard parts.count == 4 else { return }
             DispatchQueue.main.async {
                 self.model.source = player
                 self.model.isPlaying = parts[0] == "playing"
                 self.model.track = parts[1]
                 self.model.artist = parts[2]
+                self.model.album = parts[3]
                 self.fetchArtwork()
             }
         }

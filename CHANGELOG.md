@@ -3,6 +3,16 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.1] — 2026-07-14
+
+### Fixed
+- Open/close animation broken in 0.5.0: the container refactor swapped differently-sized subtrees instead of morphing one frame — restored the single spring-interpolated frame (now with dynamic island width).
+- The island now lights up on app launch when music is already playing (initial state pull at widget init, not only on first expand).
+
+### Changed
+- Now-playing card matches the reference layout: large cover art with a source badge (Music red / Spotify green), title / album / artist stack and transport controls to the right.
+- Widgets can request wider cards (`expandedWidthWeight`, media = 2×); panel is 520×170.
+
 ## [0.5.0] — 2026-07-14
 
 ### Added

@@ -91,11 +91,16 @@ struct NotchContainerView: View {
 
     private var collapsedBaseWidth: CGFloat { geometry.notchWidth + geometry.topCornerRadius * 2 }
     private var bottomRadius: CGFloat { state.expanded ? 24 : geometry.bottomCornerRadius }
+    /// The single always-present frame both states morph between — this is what the spring interpolates.
+    private var currentWidth: CGFloat {
+        state.expanded ? expandedSize.width : max(collapsedBaseWidth, collapsedContentWidth)
+    }
+    private var currentHeight: CGFloat {
+        state.expanded ? expandedSize.height : geometry.notchHeight
+    }
     /// Hover zone is larger than the visible shape so expansion triggers on approach.
     private var hoverWidth: CGFloat {
-        state.expanded
-            ? expandedSize.width
-            : max(collapsedBaseWidth, collapsedContentWidth) + collapsedSlopX * 2
+        state.expanded ? expandedSize.width : currentWidth + collapsedSlopX * 2
     }
     private var hoverHeight: CGFloat {
         state.expanded ? expandedSize.height + expandedSlop : geometry.notchHeight + collapsedSlopY
@@ -106,37 +111,36 @@ struct NotchContainerView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            content
-                .background(shape.fill(Color.black))
-                .clipShape(shape)
-                .frame(width: hoverWidth, height: hoverHeight, alignment: .top)
-                .contentShape(Rectangle())
-                .onHover { state.setHovering($0) }
-                .animation(
-                    .spring(response: state.expanded ? 0.38 : 0.30, dampingFraction: 0.78),
-                    value: state.expanded
-                )
-                .animation(.spring(response: 0.30, dampingFraction: 0.80), value: collapsedContentWidth)
-                .onPreferenceChange(CollapsedWidthPreferenceKey.self) { collapsedContentWidth = $0 }
+            ZStack(alignment: .top) {
+                if state.expanded {
+                    WidgetPanelView(registry: registry)
+                        .padding(.top, geometry.notchHeight)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
+                        .transition(.asymmetric(
+                            insertion: .opacity.animation(.easeOut(duration: 0.15).delay(0.15)),
+                            removal: .opacity.animation(.easeIn(duration: 0.08))
+                        ))
+                } else {
+                    collapsedStrip
+                        .transition(.opacity.animation(.easeOut(duration: 0.12)))
+                }
+            }
+            .frame(width: currentWidth, height: currentHeight, alignment: .top)
+            .background(shape.fill(Color.black))
+            .clipShape(shape)
+            .frame(width: hoverWidth, height: hoverHeight, alignment: .top)
+            .contentShape(Rectangle())
+            .onHover { state.setHovering($0) }
+            .animation(
+                .spring(response: state.expanded ? 0.38 : 0.30, dampingFraction: 0.78),
+                value: state.expanded
+            )
+            .animation(.spring(response: 0.30, dampingFraction: 0.80), value: collapsedContentWidth)
+            .onPreferenceChange(CollapsedWidthPreferenceKey.self) { collapsedContentWidth = $0 }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .center)
-    }
-
-    @ViewBuilder private var content: some View {
-        if state.expanded {
-            WidgetPanelView(registry: registry)
-                .padding(.top, geometry.notchHeight)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
-                .frame(width: expandedSize.width, height: expandedSize.height)
-                .transition(.asymmetric(
-                    insertion: .opacity.animation(.easeOut(duration: 0.15).delay(0.15)),
-                    removal: .opacity.animation(.easeIn(duration: 0.08))
-                ))
-        } else {
-            collapsedStrip
-        }
     }
 
     /// The cutout gap stays fixed; widget slot views sit beside it and stretch the black shape when active.
