@@ -1,6 +1,12 @@
 import AppKit
 import SwiftUI
 
+// inputs {}, does {one playlist entry with a stable Music persistent ID (names can duplicate)}, returns {value}
+struct PlaylistItem: Identifiable {
+    let id: String
+    let name: String
+}
+
 // inputs {}, does {observable now-playing state shared between the widget and its views}, returns {model}
 final class MediaModel: ObservableObject {
     @Published var track = ""
@@ -12,7 +18,7 @@ final class MediaModel: ObservableObject {
     @Published var islandVisible = false
     @Published var pickerVisible = false
     @Published var loadingPlaylists = false
-    @Published var playlists: [String] = []
+    @Published var playlists: [PlaylistItem] = []
 
     var hasTrack: Bool { !track.isEmpty }
 }
@@ -44,7 +50,7 @@ final class MediaWidget: NotchWidget {
             model: model,
             onCommand: { [weak self] command in self?.control(command) },
             onTogglePicker: { [weak self] in self?.togglePicker() },
-            onPlayPlaylist: { [weak self] name in self?.play(playlist: name) }
+            onPlayPlaylist: { [weak self] playlistID in self?.play(playlistID: playlistID) }
         ))
     }
 
@@ -101,33 +107,39 @@ final class MediaWidget: NotchWidget {
         model.loadingPlaylists = true
         let script = """
         tell application "Music"
-            set playlistNames to name of user playlists
+            set out to ""
+            repeat with p in user playlists
+                set out to out & (persistent ID of p) & tab & (name of p) & linefeed
+            end repeat
+            return out
         end tell
-        set AppleScript's text item delimiters to linefeed
-        return playlistNames as string
         """
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
             let result = self.runScript(script)?.stringValue
-            let names = (result ?? "")
+            let items = (result ?? "")
                 .components(separatedBy: "\n")
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
+                .compactMap { line -> PlaylistItem? in
+                    let parts = line.components(separatedBy: "\t")
+                    guard parts.count == 2 else { return nil }
+                    let name = parts[1].trimmingCharacters(in: .whitespaces)
+                    guard !parts[0].isEmpty, !name.isEmpty else { return nil }
+                    return PlaylistItem(id: parts[0], name: name)
+                }
             DispatchQueue.main.async {
-                self.model.playlists = names
+                self.model.playlists = items
                 self.model.loadingPlaylists = false
-                Log.info("media: loaded \(names.count) playlists")
+                Log.info("media: loaded \(items.count) playlists")
             }
         }
     }
 
-    // inputs {playlist name}, does {starts the Apple Music playlist; the resulting playerInfo push flips the card to now-playing}, returns {}
-    private func play(playlist: String) {
-        let escaped = playlist
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
+    // inputs {playlist persistent ID}, does {starts the exact Apple Music playlist (names can duplicate); the resulting playerInfo push flips the card to now-playing}, returns {}
+    private func play(playlistID: String) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.runScript("tell application \"Music\" to play user playlist \"\(escaped)\"")
+            self?.runScript(
+                "tell application \"Music\" to play (first user playlist whose persistent ID is \"\(playlistID)\")"
+            )
         }
     }
 

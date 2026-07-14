@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.9] — 2026-07-14
+
+### Fixed
+- Playlists are identified by Music's `persistent ID` instead of name: duplicate-named playlists no longer share hover state, and picking one now plays exactly that playlist (name-based play always hit the first match).
+
 ## [0.5.8] — 2026-07-14
 
 ### Fixed

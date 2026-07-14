@@ -52,8 +52,8 @@ struct MediaCardView: View {
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 0) {
-                        ForEach(model.playlists, id: \.self) { name in
-                            PlaylistRowView(name: name) { onPlayPlaylist(name) }
+                        ForEach(model.playlists) { playlist in
+                            PlaylistRowView(name: playlist.name) { onPlayPlaylist(playlist.id) }
                         }
                     }
                     .padding(.top, 20)
