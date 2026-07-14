@@ -105,7 +105,7 @@ struct NotchContainerView: View {
         state.expanded ? expandedSize.width : max(collapsedBaseWidth, collapsedContentWidth)
     }
     private var currentHeight: CGFloat {
-        state.expanded ? expandedSize.height : geometry.notchHeight + (dragNear ? 14 : 0)
+        state.expanded ? expandedSize.height : geometry.notchHeight
     }
     /// Hover zone is larger than the visible shape so expansion triggers on approach.
     private var hoverWidth: CGFloat {
@@ -153,6 +153,12 @@ struct NotchContainerView: View {
                 registry.beginFileDropTakeover()
                 state.expanded = true
             }
+            // File drag close to the notch: open the FULL panel (takeover) right away — don't wait for the strip.
+            .onChange(of: dragNear) { near in
+                guard near, !state.expanded else { return }
+                registry.beginFileDropTakeover()
+                state.expanded = true
+            }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .center)
@@ -171,7 +177,7 @@ struct NotchContainerView: View {
                 ForEach(registry.activeWidgets, id: \.id) { widget in widget.collapsedTrailing }
             }
         }
-        .padding(.horizontal, dragMonitor.draggingFiles ? (dragNear ? 30 : 20) : 0)
+        .padding(.horizontal, dragMonitor.draggingFiles ? 20 : 0)
         .frame(height: geometry.notchHeight)
         .background(
             GeometryReader { proxy in

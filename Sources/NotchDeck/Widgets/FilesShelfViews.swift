@@ -84,13 +84,6 @@ struct FilesTakeoverView: View {
                         Text("\(model.files.count) file\(model.files.count == 1 ? "" : "s")")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.55))
-                        Button(action: onAirDropShelf) {
-                            Image(systemName: "paperplane")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.white.opacity(0.6))
-                        }
-                        .buttonStyle(.plain)
-                        .help("AirDrop all")
                         Button(action: onClear) {
                             Image(systemName: "trash")
                                 .font(.system(size: 10))
@@ -116,94 +109,32 @@ struct FilesTakeoverView: View {
         }
     }
 
+    /// Modifier chain is a byte-for-byte clone of the (working) tray zone: Group -> background ->
+    /// overlay -> onDrop. Tap gestures / contentShape / AppKit overlays on this view broke
+    /// SwiftUI's internal drop routing — do not add them here.
     private var airDropZone: some View {
-        VStack(spacing: 6) {
-            AirDropSystemIcon()
-                .frame(width: 30, height: 30)
-                .opacity(airTargeted ? 1 : 0.9)
-            Text("AirDrop")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.85))
+        Group {
+            VStack(spacing: 6) {
+                Image(systemName: "dot.radiowaves.left.and.right")
+                    .font(.title3)
+                    .foregroundStyle(.white.opacity(airTargeted ? 1 : 0.85))
+                Text("AirDrop")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color.blue.opacity(airTargeted ? 0.55 : 0.28))
         )
-        // AppKit drop destination: SwiftUI's onDrop silently failed to target this zone, so the
-        // registration goes straight through NSView.registerForDraggedTypes — deterministic.
         .overlay(
-            FileDropTargetView(
-                onTargeted: { airTargeted = $0 },
-                onDropped: { urls in
-                    Log.info("airdrop zone: drop received (\(urls.count) files)")
-                    onAirDropped(urls)
-                }
-            )
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(.white.opacity(airTargeted ? 0.35 : 0), lineWidth: 1.5)
         )
-    }
-}
-
-// inputs {}, does {the OS-provided AirDrop icon from NSSharingService, rendered as-is}, returns {View}
-struct AirDropSystemIcon: View {
-    private static let icon: NSImage? = NSSharingService(named: .sendViaAirDrop)?.image
-
-    var body: some View {
-        if let icon = Self.icon {
-            Image(nsImage: icon)
-                .resizable()
-                .interpolation(.high)
-                .scaledToFit()
-        } else {
-            Image(systemName: "wifi")
-                .font(.title3)
-                .foregroundStyle(.white)
-        }
-    }
-}
-
-// inputs {onTargeted, onDropped}, does {native AppKit file-drop destination (registerForDraggedTypes) — immune to SwiftUI onDrop routing quirks}, returns {NSViewRepresentable}
-struct FileDropTargetView: NSViewRepresentable {
-    let onTargeted: (Bool) -> Void
-    let onDropped: ([URL]) -> Void
-
-    func makeNSView(context: Context) -> DropNSView {
-        let view = DropNSView()
-        view.onTargeted = onTargeted
-        view.onDropped = onDropped
-        view.registerForDraggedTypes([.fileURL])
-        return view
-    }
-
-    func updateNSView(_ nsView: DropNSView, context: Context) {
-        nsView.onTargeted = onTargeted
-        nsView.onDropped = onDropped
-    }
-
-    final class DropNSView: NSView {
-        var onTargeted: (Bool) -> Void = { _ in }
-        var onDropped: ([URL]) -> Void = { _ in }
-
-        override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-            onTargeted(true)
-            return .copy
-        }
-
-        override func draggingExited(_ sender: NSDraggingInfo?) {
-            onTargeted(false)
-        }
-
-        override func draggingEnded(_ sender: NSDraggingInfo) {
-            onTargeted(false)
-        }
-
-        override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-            let urls = sender.draggingPasteboard.readObjects(
-                forClasses: [NSURL.self],
-                options: [.urlReadingFileURLsOnly: true]
-            ) as? [URL] ?? []
-            guard !urls.isEmpty else { return false }
-            DispatchQueue.main.async { [onDropped] in onDropped(urls) }
+        .onDrop(of: [.fileURL], isTargeted: $airTargeted) { providers in
+            Log.info("airdrop zone: drop received (\(providers.count) providers)")
+            loadDroppedURLs(providers) { onAirDropped($0) }
             return true
         }
     }
@@ -234,6 +165,8 @@ struct FileThumbView: View {
         .onHover { hovered = $0 }
         .onAppear { generateThumbnail() }
         .help(url.lastPathComponent)
+        // Drag the item OUT of the tray into Finder or any app.
+        .onDrag { NSItemProvider(contentsOf: url) ?? NSItemProvider() }
     }
 
     // inputs {}, does {asks QuickLook for a real content thumbnail; keeps the macOS file icon when none exists}, returns {}

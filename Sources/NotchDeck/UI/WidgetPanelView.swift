@@ -106,17 +106,19 @@ struct LauncherSquareView: View {
                 .overlay(alignment: .topTrailing) {
                     if let badge {
                         Text(badge)
-                            .font(.system(size: 8, weight: .bold))
+                            .font(.system(size: 7, weight: .bold))
                             .foregroundStyle(.white)
-                            .padding(3)
+                            .padding(2.5)
                             .background(Circle().fill(.blue))
-                            .offset(x: 5, y: -5)
+                            .offset(x: 3, y: -3)
                     }
                 }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        // Lift badge-carrying squares above grid siblings so the badge is never painted over.
+        .zIndex(badge == nil ? 0 : 1)
     }
 }
 

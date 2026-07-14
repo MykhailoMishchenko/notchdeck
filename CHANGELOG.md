@@ -3,6 +3,21 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.7.3] — 2026-07-14
+
+### Fixed
+- AirDrop zone finally accepts drops: the zone is now a byte-for-byte clone of the tray's working SwiftUI chain — the tap gesture / contentShape / AppKit overlay variants all broke SwiftUI's internal drop routing (NSHostingView owns the drag session and never forwards to AppKit subviews).
+- Launcher badge is no longer clipped (smaller, tucked into the corner, zIndex above grid siblings).
+
+### Added
+- Drag files OUT of the tray into Finder or any app (`onDrag` per item).
+- Tray dedup: the same source file dropped twice stays a single item.
+
+### Changed
+- A file drag near the notch now opens the FULL panel (takeover) immediately — the strip stretch is gone in favor of the earlier full expansion.
+- AirDrop icon: monochrome SF glyph consistent with the rest of the UI (macOS ships no public "airdrop" symbol — verified).
+- The paperplane button is removed from the tray footer.
+
 ## [0.7.2] — 2026-07-14
 
 ### Fixed

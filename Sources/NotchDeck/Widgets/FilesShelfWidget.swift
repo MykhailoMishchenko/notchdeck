@@ -13,6 +13,8 @@ final class FilesShelfWidget: NotchWidget {
     private let model = FilesShelfModel()
     private let shelfDir: URL
     private weak var host: WidgetHost?
+    /// Source paths already shelved — the same file dropped twice stays a single tray item.
+    private var sourcePaths = Set<String>()
 
     init() {
         shelfDir = FileManager.default.temporaryDirectory.appendingPathComponent("NotchDeckShelf", isDirectory: true)
@@ -45,9 +47,14 @@ final class FilesShelfWidget: NotchWidget {
         ))
     }
 
-    // inputs {urls}, does {copies dropped files into the temp shelf (unique names) and lists them}, returns {}
+    // inputs {urls}, does {copies dropped files into the temp shelf (unique names, deduped by source) and lists them}, returns {}
     private func add(_ urls: [URL]) {
         for url in urls {
+            guard !sourcePaths.contains(url.path) else {
+                Log.info("shelf: duplicate skipped \(url.lastPathComponent)")
+                continue
+            }
+            sourcePaths.insert(url.path)
             var dest = shelfDir.appendingPathComponent(url.lastPathComponent)
             if FileManager.default.fileExists(atPath: dest.path) {
                 dest = shelfDir.appendingPathComponent("\(UUID().uuidString.prefix(6))-\(url.lastPathComponent)")
@@ -72,5 +79,6 @@ final class FilesShelfWidget: NotchWidget {
     private func clear() {
         model.files.forEach { try? FileManager.default.removeItem(at: $0) }
         model.files.removeAll()
+        sourcePaths.removeAll()
     }
 }
