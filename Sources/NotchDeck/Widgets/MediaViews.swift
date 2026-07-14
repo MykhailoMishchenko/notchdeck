@@ -82,23 +82,23 @@ struct MediaCardView: View {
 
     /// Reference layout: big art with a source badge on the left; title / album / artist and transport on the right.
     private var nowPlaying: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             artworkThumb
             VStack(alignment: .leading, spacing: 2) {
                 Text(model.track)
-                    .font(.callout.weight(.semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 Text(model.album)
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(.white.opacity(0.65))
                     .lineLimit(1)
                 Text(model.artist)
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(.white.opacity(0.4))
                     .lineLimit(1)
-                Spacer(minLength: 4)
-                HStack(spacing: 16) {
+                Spacer(minLength: 3)
+                HStack(spacing: 12) {
                     controlButton("backward.fill") { onCommand("previous track") }
                     controlButton(model.isPlaying ? "pause.fill" : "play.fill") { onCommand("playpause") }
                     controlButton("forward.fill") { onCommand("next track") }
@@ -106,7 +106,7 @@ struct MediaCardView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(10)
+        .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .overlay(alignment: .topTrailing) {
             Button(action: onTogglePicker) {
@@ -135,31 +135,31 @@ struct MediaCardView: View {
                     )
             }
         }
-        .frame(width: 88, height: 88)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .frame(width: 70, height: 70)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(alignment: .bottomTrailing) {
             Image(systemName: "music.note")
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 8, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: 18, height: 18)
+                .frame(width: 15, height: 15)
                 .background(
                     RoundedRectangle(cornerRadius: 5)
                         .fill(model.source == "Spotify"
                             ? Color(red: 0.11, green: 0.73, blue: 0.33)
                             : Color(red: 0.98, green: 0.18, blue: 0.28))
                 )
-                .offset(x: 5, y: 5)
+                .offset(x: 4, y: 4)
         }
-        .padding(.bottom, 5)
-        .padding(.trailing, 5)
+        .padding(.bottom, 4)
+        .padding(.trailing, 4)
     }
 
     private func controlButton(_ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 13))
+                .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.9))
-                .frame(width: 24, height: 24)
+                .frame(width: 21, height: 21)
                 .background(Circle().fill(.white.opacity(0.08)))
         }
         .buttonStyle(.plain)

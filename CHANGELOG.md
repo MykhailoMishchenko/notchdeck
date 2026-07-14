@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.3] — 2026-07-14
+
+### Changed
+- Player proportions: media card 1.5× (was 2×), cover 70 pt (was 88), tighter fonts, controls and paddings.
+
 ## [0.5.2] — 2026-07-14
 
 ### Fixed
