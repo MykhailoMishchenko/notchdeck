@@ -22,39 +22,33 @@ func loadDroppedURLs(_ providers: [NSItemProvider], completion: @escaping ([URL]
     group.notify(queue: .main) { completion(urls) }
 }
 
-// inputs {model, callbacks}, does {full-panel takeover: dashed Files Tray grid (left) + blue AirDrop zone (right); back via swipe-right or chevron}, returns {View}
+// inputs {model, callbacks}, does {full-panel takeover: full-width dashed Files Tray grid; back via swipe-right or chevron}, returns {View}
 struct FilesTakeoverView: View {
     @ObservedObject var model: FilesShelfModel
     let onDropped: ([URL]) -> Void
-    let onAirDropped: ([URL]) -> Void
-    let onAirDropShelf: () -> Void
+    let onDragOutCompleted: (URL) -> Void
     let onClear: () -> Void
     let onBack: () -> Void
 
     @State private var trayTargeted = false
-    @State private var airTargeted = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            trayZone
-            airDropZone
-        }
-        .overlay(alignment: .topLeading) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.backward.circle.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.45))
-            }
-            .buttonStyle(.plain)
-            .padding(2)
-        }
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 15)
-                .onEnded { value in
-                    if value.translation.width > 40 { onBack() }
+        trayZone
+            .overlay(alignment: .topLeading) {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.backward.circle.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white.opacity(0.45))
                 }
-        )
+                .buttonStyle(.plain)
+                .padding(2)
+            }
+            .gesture(
+                DragGesture(minimumDistance: 15)
+                    .onEnded { value in
+                        if value.translation.width > 40 { onBack() }
+                    }
+            )
     }
 
     private var trayZone: some View {
@@ -72,13 +66,13 @@ struct FilesTakeoverView: View {
             } else {
                 VStack(spacing: 4) {
                     ScrollView(showsIndicators: false) {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 38), spacing: 6)], spacing: 6) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 56), spacing: 8)], spacing: 8) {
                             ForEach(model.files, id: \.self) { url in
-                                FileThumbView(url: url)
+                                FileTrayItemView(url: url) { onDragOutCompleted(url) }
                             }
                         }
-                        .padding(.top, 10)
-                        .padding(.horizontal, 10)
+                        .padding(.top, 12)
+                        .padding(.horizontal, 14)
                     }
                     HStack(spacing: 10) {
                         Text("\(model.files.count) file\(model.files.count == 1 ? "" : "s")")
@@ -95,6 +89,7 @@ struct FilesTakeoverView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(RoundedRectangle(cornerRadius: 14).fill(.white.opacity(trayTargeted ? 0.08 : 0.03)))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
@@ -108,65 +103,49 @@ struct FilesTakeoverView: View {
             return true
         }
     }
-
-    /// Modifier chain is a byte-for-byte clone of the (working) tray zone: Group -> background ->
-    /// overlay -> onDrop. Tap gestures / contentShape / AppKit overlays on this view broke
-    /// SwiftUI's internal drop routing — do not add them here.
-    private var airDropZone: some View {
-        Group {
-            VStack(spacing: 6) {
-                Image(systemName: "dot.radiowaves.left.and.right")
-                    .font(.title3)
-                    .foregroundStyle(.white.opacity(airTargeted ? 1 : 0.85))
-                Text("AirDrop")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.85))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.blue.opacity(airTargeted ? 0.55 : 0.28))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(.white.opacity(airTargeted ? 0.35 : 0), lineWidth: 1.5)
-        )
-        .onDrop(of: [.fileURL], isTargeted: $airTargeted) { providers in
-            Log.info("airdrop zone: drop received (\(providers.count) providers)")
-            loadDroppedURLs(providers) { onAirDropped($0) }
-            return true
-        }
-    }
 }
 
-// inputs {url}, does {one tray item: QuickLook thumbnail for previewable files (images etc.), native macOS icon otherwise (folders/docs); soft individual hover zoom}, returns {View}
-struct FileThumbView: View {
+// inputs {url, onDraggedOut}, does {one tray item: preview/icon + filename; drag OUT via a real NSDraggingSource so a successful external drop removes it from the tray}, returns {View}
+struct FileTrayItemView: View {
     let url: URL
+    let onDraggedOut: () -> Void
     @State private var thumbnail: NSImage?
     @State private var hovered = false
 
     var body: some View {
-        Group {
-            if let thumbnail {
-                Image(nsImage: thumbnail)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
-                    .resizable()
-                    .scaledToFit()
+        VStack(spacing: 3) {
+            Group {
+                if let thumbnail {
+                    Image(nsImage: thumbnail)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                        .resizable()
+                        .scaledToFit()
+                }
             }
+            .frame(width: 38, height: 38)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .scaleEffect(hovered ? 1.15 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hovered)
+            .overlay(
+                DragOutSourceView(
+                    url: url,
+                    dragImage: thumbnail ?? NSWorkspace.shared.icon(forFile: url.path),
+                    onHover: { hovered = $0 },
+                    onDraggedOut: onDraggedOut
+                )
+            )
+            Text(url.lastPathComponent)
+                .font(.system(size: 9))
+                .foregroundStyle(.white.opacity(0.6))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .frame(width: 56)
         }
-        .frame(width: 38, height: 38)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .scaleEffect(hovered ? 1.15 : 1)
-        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hovered)
-        .onHover { hovered = $0 }
-        .onAppear { generateThumbnail() }
         .help(url.lastPathComponent)
-        // Drag the item OUT of the tray into Finder or any app.
-        .onDrag { NSItemProvider(contentsOf: url) ?? NSItemProvider() }
+        .onAppear { generateThumbnail() }
     }
 
     // inputs {}, does {asks QuickLook for a real content thumbnail; keeps the macOS file icon when none exists}, returns {}
@@ -190,3 +169,72 @@ struct FileThumbView: View {
     }
 }
 
+// inputs {url, dragImage, onHover, onDraggedOut}, does {AppKit drag source: hover tracking + beginDraggingSession; fires onDraggedOut only when the drop was ACCEPTED outside our app (the session-end callback SwiftUI's onDrag lacks)}, returns {NSViewRepresentable}
+struct DragOutSourceView: NSViewRepresentable {
+    let url: URL
+    let dragImage: NSImage
+    let onHover: (Bool) -> Void
+    let onDraggedOut: () -> Void
+
+    func makeNSView(context: Context) -> SourceNSView {
+        let view = SourceNSView()
+        update(view)
+        return view
+    }
+
+    func updateNSView(_ nsView: SourceNSView, context: Context) {
+        update(nsView)
+    }
+
+    private func update(_ view: SourceNSView) {
+        view.url = url
+        view.dragImage = dragImage
+        view.onHover = onHover
+        view.onDraggedOut = onDraggedOut
+    }
+
+    final class SourceNSView: NSView, NSDraggingSource {
+        var url: URL?
+        var dragImage: NSImage?
+        var onHover: (Bool) -> Void = { _ in }
+        var onDraggedOut: () -> Void = {}
+        private var mouseDownEvent: NSEvent?
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            trackingAreas.forEach(removeTrackingArea)
+            addTrackingArea(NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .activeAlways],
+                owner: self,
+                userInfo: nil
+            ))
+        }
+
+        override func mouseEntered(with event: NSEvent) { onHover(true) }
+        override func mouseExited(with event: NSEvent) { onHover(false) }
+        override func mouseDown(with event: NSEvent) { mouseDownEvent = event }
+
+        override func mouseDragged(with event: NSEvent) {
+            guard let mouseDownEvent, let url else { return }
+            self.mouseDownEvent = nil
+            let item = NSDraggingItem(pasteboardWriter: url as NSURL)
+            let image = dragImage ?? NSWorkspace.shared.icon(forFile: url.path)
+            item.setDraggingFrame(bounds, contents: image)
+            beginDraggingSession(with: [item], event: mouseDownEvent, source: self)
+        }
+
+        func draggingSession(
+            _ session: NSDraggingSession,
+            sourceOperationMaskFor context: NSDraggingContext
+        ) -> NSDragOperation {
+            context == .outsideApplication ? .copy : []
+        }
+
+        func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+            guard !operation.isEmpty else { return }
+            Log.info("shelf: item dragged out, operation=\(operation.rawValue)")
+            DispatchQueue.main.async { [onDraggedOut] in onDraggedOut() }
+        }
+    }
+}

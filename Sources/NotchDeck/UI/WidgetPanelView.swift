@@ -67,25 +67,45 @@ struct LauncherColumnView: View {
     let widgets: [NotchWidget]
     let registry: WidgetRegistry
 
-    private let columns = [
-        GridItem(.fixed(30), spacing: 6),
-        GridItem(.fixed(30), spacing: 6),
-    ]
-
+    /// Plain rows of two, NOT LazyVGrid — lazy containers clip children, cutting corner badges.
     var body: some View {
-        VStack(spacing: 0) {
-            LazyVGrid(columns: columns, spacing: 6) {
-                ForEach(widgets, id: \.id) { widget in
-                    LauncherSquareView(icon: widget.launcherIcon, badge: widget.launcherBadge) {
-                        registry.requestTakeover(widget.id)
+        let entries = launcherEntries
+        VStack(spacing: 6) {
+            ForEach(Array(stride(from: 0, to: entries.count, by: 2)), id: \.self) { index in
+                HStack(spacing: 6) {
+                    launcherSquare(entries[index])
+                    if index + 1 < entries.count {
+                        launcherSquare(entries[index + 1])
+                    } else {
+                        Color.clear.frame(width: 30, height: 30)
                     }
-                }
-                LauncherSquareView(icon: "gearshape", badge: nil) {
-                    SettingsWindowController.shared.show(registry: registry)
                 }
             }
             Spacer(minLength: 0)
         }
+    }
+
+    private struct LauncherEntry {
+        let id: String
+        let icon: String
+        let badge: String?
+        let action: () -> Void
+    }
+
+    private var launcherEntries: [LauncherEntry] {
+        var entries = widgets.map { widget in
+            LauncherEntry(id: widget.id, icon: widget.launcherIcon, badge: widget.launcherBadge) {
+                registry.requestTakeover(widget.id)
+            }
+        }
+        entries.append(LauncherEntry(id: "__settings", icon: "gearshape", badge: nil) {
+            SettingsWindowController.shared.show(registry: registry)
+        })
+        return entries
+    }
+
+    private func launcherSquare(_ entry: LauncherEntry) -> some View {
+        LauncherSquareView(icon: entry.icon, badge: entry.badge, action: entry.action)
     }
 }
 

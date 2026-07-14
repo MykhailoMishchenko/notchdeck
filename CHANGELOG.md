@@ -3,6 +3,16 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.7.4] — 2026-07-14
+
+### Fixed
+- Launcher badge clipping for real this time: `LazyVGrid` clips its children — the launcher now uses plain two-per-row stacks.
+- Drag-out actually MOVES the item out of the tray: items are dragged via a real AppKit `NSDraggingSource`, and the session-end callback (which SwiftUI's `onDrag` simply doesn't have) removes the item only when the drop was accepted outside the app. The temp copy stays until Clear so the receiver can finish reading.
+
+### Changed
+- AirDrop zone is shelved for now (drop routing conflicts); the Files Tray takes the full panel width.
+- Every tray item shows its filename under the preview (middle-truncated).
+
 ## [0.7.3] — 2026-07-14
 
 ### Fixed

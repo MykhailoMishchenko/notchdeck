@@ -15,6 +15,8 @@ final class FilesShelfWidget: NotchWidget {
     private weak var host: WidgetHost?
     /// Source paths already shelved — the same file dropped twice stays a single tray item.
     private var sourcePaths = Set<String>()
+    /// Shelf copy path -> original source path (to release the dedup entry when an item leaves).
+    private var sourceByShelfPath: [String: String] = [:]
 
     init() {
         shelfDir = FileManager.default.temporaryDirectory.appendingPathComponent("NotchDeckShelf", isDirectory: true)
@@ -37,11 +39,7 @@ final class FilesShelfWidget: NotchWidget {
         AnyView(FilesTakeoverView(
             model: model,
             onDropped: { [weak self] urls in self?.add(urls) },
-            onAirDropped: { [weak self] urls in self?.airDrop(urls) },
-            onAirDropShelf: { [weak self] in
-                guard let self, !self.model.files.isEmpty else { return }
-                self.airDrop(self.model.files)
-            },
+            onDragOutCompleted: { [weak self] url in self?.removeAfterDragOut(url) },
             onClear: { [weak self] in self?.clear() },
             onBack: { [weak self] in self?.host?.endTakeover() }
         ))
@@ -62,6 +60,7 @@ final class FilesShelfWidget: NotchWidget {
             do {
                 try FileManager.default.copyItem(at: url, to: dest)
                 model.files.append(dest)
+                sourceByShelfPath[dest.path] = url.path
                 Log.info("shelf: added \(dest.lastPathComponent)")
             } catch {
                 Log.info("shelf: copy failed \(url.lastPathComponent): \(error.localizedDescription)")
@@ -75,10 +74,20 @@ final class FilesShelfWidget: NotchWidget {
         NSSharingService(named: .sendViaAirDrop)?.perform(withItems: urls)
     }
 
+    // inputs {shelf url}, does {removes an item after a successful drag-out (temp copy stays until clear — the receiver may still be reading it)}, returns {}
+    private func removeAfterDragOut(_ url: URL) {
+        model.files.removeAll { $0 == url }
+        if let source = sourceByShelfPath.removeValue(forKey: url.path) {
+            sourcePaths.remove(source)
+        }
+        Log.info("shelf: removed after drag-out \(url.lastPathComponent)")
+    }
+
     // inputs {}, does {empties the shelf and removes the temp copies}, returns {}
     private func clear() {
         model.files.forEach { try? FileManager.default.removeItem(at: $0) }
         model.files.removeAll()
         sourcePaths.removeAll()
+        sourceByShelfPath.removeAll()
     }
 }
