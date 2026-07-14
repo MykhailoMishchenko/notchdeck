@@ -4,7 +4,7 @@
 
 ![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-black)
 ![Swift](https://img.shields.io/badge/Swift-5.10-orange)
-![Version](https://img.shields.io/badge/version-0.3.0-blue)
+![Version](https://img.shields.io/badge/version-0.4.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
@@ -38,8 +38,9 @@ swift run NotchDeck          # dev run
 - [x] 0.1.0 — notch window core: hover expand/collapse, pill fallback, multi-monitor
 - [x] 0.2.0 — widget system: `NotchWidget` protocol, registry, push/poll updates, reorder
 - [x] 0.3.0 — widgets: media controls, files shelf (drag & drop + AirDrop), calendar
-- [ ] 0.4.0 — settings: widget toggles, launch at login
-- [ ] 0.5.0 — extension point for external-process widgets (XPC) + integration docs
+- [x] 0.4.0 — Apple Music playlist picker in the media widget
+- [ ] 0.5.0 — settings: widget toggles, launch at login
+- [ ] 0.6.0 — extension point for external-process widgets (XPC) + integration docs
 
 Versioning: the single source of truth is the [`VERSION`](VERSION) file; releases are tagged `vX.Y.Z`, history lives in [CHANGELOG.md](CHANGELOG.md).
 

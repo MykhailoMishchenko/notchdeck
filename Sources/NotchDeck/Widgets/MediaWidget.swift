@@ -7,6 +7,9 @@ final class MediaModel: ObservableObject {
     @Published var artist = ""
     @Published var isPlaying = false
     @Published var source: String?
+    @Published var pickerVisible = false
+    @Published var loadingPlaylists = false
+    @Published var playlists: [String] = []
 }
 
 // inputs {}, does {push-based media widget: track/state via DistributedNotificationCenter (Spotify + Apple Music), controls via AppleScript}, returns {NotchWidget}
@@ -28,14 +31,19 @@ final class MediaWidget: NotchWidget {
     }
 
     var expandedView: AnyView {
-        AnyView(MediaCardView(model: model) { [weak self] command in self?.control(command) })
+        AnyView(MediaCardView(
+            model: model,
+            onCommand: { [weak self] command in self?.control(command) },
+            onTogglePicker: { [weak self] in self?.togglePicker() },
+            onPlayPlaylist: { [weak self] name in self?.play(playlist: name) }
+        ))
     }
 
     func onAppear() {
         refreshFromRunningPlayer()
     }
 
-    // inputs {notification}, does {push update: applies track/artist/state from the player's broadcast}, returns {}
+    // inputs {notification}, does {push update: applies track/artist/state from the player's broadcast; hides the playlist picker once something plays}, returns {}
     @objc private func playbackChanged(_ notification: Notification) {
         let info = notification.userInfo
         DispatchQueue.main.async { [self] in
@@ -43,7 +51,48 @@ final class MediaWidget: NotchWidget {
             model.track = info?["Name"] as? String ?? ""
             model.artist = info?["Artist"] as? String ?? ""
             model.isPlaying = (info?["Player State"] as? String) == "Playing"
+            if model.isPlaying { model.pickerVisible = false }
             Log.info("media push: \(model.source ?? "?") \(model.isPlaying ? "playing" : "paused") \(model.track)")
+        }
+    }
+
+    // inputs {}, does {shows/hides the Apple Music playlist picker; loads playlist names on first open}, returns {}
+    private func togglePicker() {
+        if model.pickerVisible {
+            model.pickerVisible = false
+            return
+        }
+        model.pickerVisible = true
+        model.loadingPlaylists = true
+        let script = """
+        tell application "Music"
+            set playlistNames to name of user playlists
+        end tell
+        set AppleScript's text item delimiters to linefeed
+        return playlistNames as string
+        """
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            let result = self.runScript(script)
+            let names = (result ?? "")
+                .components(separatedBy: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            DispatchQueue.main.async {
+                self.model.playlists = names
+                self.model.loadingPlaylists = false
+                Log.info("media: loaded \(names.count) playlists")
+            }
+        }
+    }
+
+    // inputs {playlist name}, does {starts the Apple Music playlist; the resulting playerInfo push flips the card to now-playing}, returns {}
+    private func play(playlist: String) {
+        let escaped = playlist
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.runScript("tell application \"Music\" to play user playlist \"\(escaped)\"")
         }
     }
 
@@ -97,38 +146,102 @@ final class MediaWidget: NotchWidget {
     }
 }
 
-// inputs {model, onCommand}, does {media card UI: track, artist, transport controls}, returns {View}
+// inputs {model, callbacks}, does {media card UI: now-playing controls, idle state, Apple Music playlist picker}, returns {View}
 struct MediaCardView: View {
     @ObservedObject var model: MediaModel
     let onCommand: (String) -> Void
+    let onTogglePicker: () -> Void
+    let onPlayPlaylist: (String) -> Void
 
     var body: some View {
-        VStack(spacing: 8) {
-            if model.track.isEmpty {
-                Image(systemName: "music.note")
-                    .font(.title3)
-                    .foregroundStyle(.white.opacity(0.4))
-                Text("Nothing playing")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.5))
+        Group {
+            if model.pickerVisible {
+                picker
+            } else if model.track.isEmpty {
+                idle
             } else {
-                Text(model.track)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                Text(model.artist)
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.55))
-                    .lineLimit(1)
-                HStack(spacing: 14) {
-                    controlButton("backward.fill") { onCommand("previous track") }
-                    controlButton(model.isPlaying ? "pause.fill" : "play.fill") { onCommand("playpause") }
-                    controlButton("forward.fill") { onCommand("next track") }
-                }
+                nowPlaying
             }
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var idle: some View {
+        Button(action: onTogglePicker) {
+            VStack(spacing: 6) {
+                Image(systemName: "music.note.list")
+                    .font(.title3)
+                    .foregroundStyle(.white.opacity(0.4))
+                Text("Choose a playlist")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var picker: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Button(action: onTogglePicker) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+                Text("Playlists")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            if model.loadingPlaylists {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if model.playlists.isEmpty {
+                Text("No playlists")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.4))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(model.playlists, id: \.self) { name in
+                            Button { onPlayPlaylist(name) } label: {
+                                Text(name)
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.85))
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.vertical, 2)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var nowPlaying: some View {
+        VStack(spacing: 8) {
+            Text(model.track)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+            Text(model.artist)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.55))
+                .lineLimit(1)
+            HStack(spacing: 14) {
+                controlButton("backward.fill") { onCommand("previous track") }
+                controlButton(model.isPlaying ? "pause.fill" : "play.fill") { onCommand("playpause") }
+                controlButton("forward.fill") { onCommand("next track") }
+            }
+        }
     }
 
     private func controlButton(_ icon: String, action: @escaping () -> Void) -> some View {

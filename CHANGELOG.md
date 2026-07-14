@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.4.0] — 2026-07-14
+
+### Added
+- Apple Music playlist picker in the media widget: when nothing is playing, click the card to browse your library's playlists and start one; the resulting player broadcast flips the card to now-playing automatically. The picker also auto-closes whenever playback starts anywhere (Spotify or Music).
+
 ## [0.3.1] — 2026-07-14
 
 ### Changed
