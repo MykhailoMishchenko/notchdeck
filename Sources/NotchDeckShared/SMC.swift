@@ -2,7 +2,7 @@ import Foundation
 import IOKit
 
 // inputs {}, does {minimal user-space AppleSMC reader: fan RPMs and temperature keys — READ ONLY (writes require the future privileged helper, see ARCHITECTURE)}, returns {namespace}
-enum SMC {
+public enum SMC {
     private struct SMCVersion {
         var major: UInt8 = 0, minor: UInt8 = 0, build: UInt8 = 0, reserved: UInt8 = 0
         var release: UInt16 = 0
@@ -38,6 +38,7 @@ enum SMC {
     }
 
     private static let readCommand: UInt8 = 5
+    private static let writeCommand: UInt8 = 6
     private static let keyInfoCommand: UInt8 = 9
 
     private static var connection: io_connect_t = {
@@ -50,7 +51,7 @@ enum SMC {
     }()
 
     // inputs {four-char key}, does {reads and decodes a numeric SMC value (flt / fpe2 / ui8-32)}, returns {value or nil}
-    static func readValue(_ key: String) -> Double? {
+    public static func readValue(_ key: String) -> Double? {
         guard connection != 0, key.count == 4 else { return nil }
         let keyCode = key.utf8.reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
 
@@ -89,8 +90,54 @@ enum SMC {
         }
     }
 
+    // inputs {four-char key, value}, does {writes a numeric SMC value (flt / fpe2 / ui8-16) — root only; used exclusively by the privileged helper for fan keys}, returns {success}
+    @discardableResult
+    public static func writeValue(_ key: String, _ value: Double) -> Bool {
+        guard connection != 0, key.count == 4 else { return false }
+        let keyCode = key.utf8.reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
+
+        var infoInput = SMCParamStruct()
+        var infoOutput = SMCParamStruct()
+        infoInput.key = keyCode
+        infoInput.data8 = keyInfoCommand
+        guard call(&infoInput, &infoOutput) == kIOReturnSuccess, infoOutput.result == 0 else { return false }
+
+        var write = SMCParamStruct()
+        var result = SMCParamStruct()
+        write.key = keyCode
+        write.keyInfo = infoOutput.keyInfo
+        write.data8 = writeCommand
+        let encoded: [UInt8]
+        switch fourCC(infoOutput.keyInfo.dataType) {
+        case "flt ":
+            encoded = withUnsafeBytes(of: Float32(value).bitPattern.littleEndian) { Array($0) }
+        case "fpe2":
+            let raw = UInt16(max(0, min(65535, value * 4)))
+            encoded = [UInt8(raw >> 8), UInt8(raw & 0xFF)]
+        case "ui8 ":
+            encoded = [UInt8(max(0, min(255, value)))]
+        case "ui16":
+            let raw = UInt16(max(0, min(65535, value)))
+            encoded = [UInt8(raw >> 8), UInt8(raw & 0xFF)]
+        default:
+            return false
+        }
+        withUnsafeMutableBytes(of: &write.bytes) { buffer in
+            for (index, byte) in encoded.prefix(buffer.count).enumerated() {
+                buffer[index] = byte
+            }
+        }
+        guard call(&write, &result) == kIOReturnSuccess, result.result == 0 else { return false }
+        return true
+    }
+
+    /// Number of fans reported by the SMC.
+    public static var fanCount: Int {
+        Int(readValue("FNum") ?? 0)
+    }
+
     // inputs {key list}, does {averages the readable keys within a sane range (sensor sets differ per model)}, returns {average or nil}
-    static func averageTemperature(_ keys: [String]) -> Double? {
+    public static func averageTemperature(_ keys: [String]) -> Double? {
         let values = keys.compactMap(readValue).filter { $0 > 5 && $0 < 115 }
         guard !values.isEmpty else { return nil }
         return values.reduce(0, +) / Double(values.count)

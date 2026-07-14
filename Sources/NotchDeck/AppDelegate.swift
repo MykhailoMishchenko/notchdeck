@@ -25,6 +25,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildControllers()
     }
 
+    // inputs {}, does {belt-and-suspenders: hand fans back to the SMC on clean quit (the helper also reverts when the connection drops)}, returns {}
+    func applicationWillTerminate(_ notification: Notification) {
+        FanControlClient.shared.setMode(manual: false) { _ in }
+    }
+
     // inputs {}, does {registers the MVP widget set — the only place a new widget touches outside its own file}, returns {}
     private func registerWidgets() {
         registry.register(MediaWidget())

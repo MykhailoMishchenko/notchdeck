@@ -43,6 +43,7 @@ swift run NotchDeck          # dev run
 - [x] 0.6.0 — file drag & drop: strip hint on system drags, Files Tray + AirDrop takeover zones
 - [x] 0.7.0 — launcher column, settings (widget toggles), launch at login
 - [x] 0.8.0 — Fans widget (SMC monitor, XPC control mount point), Claude usage widget, extension docs
+- [x] 0.11.0 — fan CONTROL: embedded privileged XPC helper, per-fan sliders + Auto, crash-safe revert
 
 Versioning: the single source of truth is the [`VERSION`](VERSION) file; releases are tagged `vX.Y.Z`, history lives in [CHANGELOG.md](CHANGELOG.md).
 

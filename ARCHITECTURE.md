@@ -100,20 +100,13 @@ Decisions & lessons:
 - `FanWidget` — a read-only fan/thermal monitor: user-space SMC reads (`SMC.swift`, IOKit `AppleSMC` client) need **no privileges**; per-fan RPM (`F#Ac/Mn/Mx`) and averaged M-series cluster temperatures, polled every 2 s while visible.
 - `ClaudeUsageWidget` — an example of a widget backed by an **external process**: it shells out to `ccusage` and renders the active Claude block (cost, tokens, burn rate, reset countdown). This proves the pattern: the platform neither knows nor cares where a widget's data comes from.
 
-### How fan CONTROL will plug in (future separate project)
-Writing SMC keys requires root, and the platform must stay unprivileged. The design:
+### Fan CONTROL — the embedded privileged helper (implemented)
+Writing SMC keys requires root; the platform stays unprivileged. Realized as an EMBEDDED daemon, same repo, same bundle — no separate app:
 
-1. A separate **privileged helper daemon** (`dev.notchdeck.fanhelperd`) is developed and installed independently (via `SMAppService.daemon` + an embedded `launchd` plist, or `SMJobBless` on older systems). It owns all SMC **writes** and exposes a narrow `NSXPCConnection` mach service:
-   ```swift
-   @objc protocol FanControlXPC {
-       func setFanMode(_ mode: Int, reply: @escaping (Bool) -> Void)      // auto / manual
-       func setTargetRPM(fan: Int, rpm: Double, reply: @escaping (Bool) -> Void)
-   }
-   ```
-2. `FanWidget` (this repo) becomes the client: it opens `NSXPCConnection(machServiceName: "dev.notchdeck.fanhelperd", options: [])`, keeps its read-only SMC path for telemetry, and adds sliders that call the XPC protocol. If the helper is absent, the widget stays a monitor — graceful degradation, no platform changes.
-3. Entitlements stay split: the app remains un-entitled; the helper carries the privilege and validates its client's code signature before accepting commands.
-
-The takeover view, the launcher square, the poll loop and the Settings toggle for `fans` all exist already — the future project only replaces the widget's data/command layer.
+- **`NotchDeckFanHelper`** (second SPM executable, shares `NotchDeckShared` with the app for SMC + the XPC contract) ships inside the bundle at `Contents/MacOS/`, with its `launchd` plist at `Contents/Library/LaunchDaemons/dev.notchdeck.fanhelperd.plist` (`BundleProgram` + `MachServices`). Registered via `SMAppService.daemon(plistName:)` from Settings → "Fan control"; the user approves once in System Settings → Login Items.
+- **Narrow contract** (`FanControlXPCProtocol`): `setMode(manual:)`, `setTarget(fan:rpm:)`, `status()`. The helper writes ONLY `F#Md`/`F#Tg`, clamps targets to the fan's real `[F#Mn, F#Mx]`, and — the key safety property — **reverts all fans to automatic when the last client connection drops**: an app crash can never leave fans pinned. The app also sends auto-mode on clean quit.
+- `FanWidget` degrades gracefully: helper unreachable → read-only monitor with a "Enable fan control in Settings" hint; helper up → per-fan sliders (min…max) + an Auto button.
+- Dev-signing caveat: launchd validates the daemon's signature; with ad-hoc signing each rebuild may require re-approval (same story as TCC). A stable `CODESIGN_IDENTITY` fixes it. Production hardening TODO: validate the XPC client's code signature in the listener (with ad-hoc identities this is meaningless, and the narrow clamped API bounds the harm).
 
 - SPM executable (no Xcode project); `swift run NotchDeck` for development.
 - `scripts/bundle.sh [debug|release]` — builds `NotchDeck.app` (`LSUIElement=true`, ad-hoc signed, version injected from the `VERSION` file). The bundle is required for `SMAppService` (launch at login, Stage 3.5).

@@ -3,6 +3,13 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.11.0] — 2026-07-14
+
+### Added
+- **Fan control** — no separate app: an embedded privileged helper (`NotchDeckFanHelper`, second executable in the same bundle) registered via `SMAppService.daemon` from Settings → "Fan control" (one-time approval in System Settings → Login Items). The Fans widget gains per-fan RPM sliders and an Auto button once the helper is up; without it, it stays a read-only monitor.
+- Safety: the helper writes only fan mode/target keys, clamps to each fan's real min/max, reverts everything to automatic when the client connection drops (crash-safe) and on clean app quit.
+- `NotchDeckShared` module: SMC read/write + the `FanControlXPCProtocol` contract shared by app and daemon.
+
 ## [0.10.2] — 2026-07-14
 
 ### Fixed

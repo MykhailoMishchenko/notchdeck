@@ -12,6 +12,17 @@ struct SettingsView: View {
     @State private var crabEnabled = UserDefaults.standard.object(forKey: ClaudeUsageWidget.crabEnabledKey) == nil
         ? true
         : UserDefaults.standard.bool(forKey: ClaudeUsageWidget.crabEnabledKey)
+    @State private var fanError: String?
+    @State private var fanStatusTick = 0
+
+    private var fanDaemonLabel: String {
+        switch FanControlClient.shared.daemonStatus {
+        case .enabled: return "Helper enabled — sliders active in the Fans widget"
+        case .requiresApproval: return "Waiting for approval in System Settings → Login Items"
+        case .notFound: return "Helper not found in the app bundle"
+        default: return "Privileged helper for fan speed control"
+        }
+    }
 
     var body: some View {
         Form {
@@ -62,6 +73,39 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(.red)
                     }
+                }
+            }
+            Section("Fan control") {
+                HStack {
+                    Text(fanDaemonLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    switch FanControlClient.shared.daemonStatus {
+                    case .enabled:
+                        Button("Disable") {
+                            fanError = FanControlClient.shared.unregisterDaemon()
+                            fanStatusTick += 1
+                        }
+                    case .requiresApproval:
+                        Button("Open System Settings") {
+                            SMAppService.openSystemSettingsLoginItems()
+                        }
+                    default:
+                        Button("Enable") {
+                            fanError = FanControlClient.shared.registerDaemon()
+                            fanStatusTick += 1
+                            if FanControlClient.shared.daemonStatus == .requiresApproval {
+                                SMAppService.openSystemSettingsLoginItems()
+                            }
+                        }
+                    }
+                }
+                .id(fanStatusTick)
+                if let fanError {
+                    Text(fanError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
             }
             Section("General") {
