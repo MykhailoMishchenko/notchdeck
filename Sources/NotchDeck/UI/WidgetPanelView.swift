@@ -74,7 +74,6 @@ struct LauncherColumnView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 0)
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(widgets, id: \.id) { widget in
                     LauncherSquareView(icon: widget.launcherIcon, badge: widget.launcherBadge) {

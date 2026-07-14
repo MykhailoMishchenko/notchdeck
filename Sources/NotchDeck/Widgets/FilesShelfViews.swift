@@ -80,10 +80,17 @@ struct FilesTakeoverView: View {
                         .padding(.top, 10)
                         .padding(.horizontal, 10)
                     }
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         Text("\(model.files.count) file\(model.files.count == 1 ? "" : "s")")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.55))
+                        Button(action: onAirDropShelf) {
+                            Image(systemName: "paperplane")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
+                        .help("AirDrop all")
                         Button(action: onClear) {
                             Image(systemName: "trash")
                                 .font(.system(size: 10))
@@ -111,9 +118,9 @@ struct FilesTakeoverView: View {
 
     private var airDropZone: some View {
         VStack(spacing: 6) {
-            AirDropGlyph()
-                .frame(width: 28, height: 28)
-                .opacity(airTargeted ? 1 : 0.85)
+            AirDropSystemIcon()
+                .frame(width: 30, height: 30)
+                .opacity(airTargeted ? 1 : 0.9)
             Text("AirDrop")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.85))
@@ -123,46 +130,82 @@ struct FilesTakeoverView: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color.blue.opacity(airTargeted ? 0.55 : 0.28))
         )
-        .contentShape(Rectangle())
-        .onDrop(of: [.fileURL], isTargeted: $airTargeted) { providers in
-            Log.info("airdrop zone: drop received (\(providers.count) providers)")
-            loadDroppedURLs(providers) { onAirDropped($0) }
+        // AppKit drop destination: SwiftUI's onDrop silently failed to target this zone, so the
+        // registration goes straight through NSView.registerForDraggedTypes — deterministic.
+        .overlay(
+            FileDropTargetView(
+                onTargeted: { airTargeted = $0 },
+                onDropped: { urls in
+                    Log.info("airdrop zone: drop received (\(urls.count) files)")
+                    onAirDropped(urls)
+                }
+            )
+        )
+    }
+}
+
+// inputs {}, does {the OS-provided AirDrop icon from NSSharingService, rendered as-is}, returns {View}
+struct AirDropSystemIcon: View {
+    private static let icon: NSImage? = NSSharingService(named: .sendViaAirDrop)?.image
+
+    var body: some View {
+        if let icon = Self.icon {
+            Image(nsImage: icon)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+        } else {
+            Image(systemName: "wifi")
+                .font(.title3)
+                .foregroundStyle(.white)
+        }
+    }
+}
+
+// inputs {onTargeted, onDropped}, does {native AppKit file-drop destination (registerForDraggedTypes) — immune to SwiftUI onDrop routing quirks}, returns {NSViewRepresentable}
+struct FileDropTargetView: NSViewRepresentable {
+    let onTargeted: (Bool) -> Void
+    let onDropped: ([URL]) -> Void
+
+    func makeNSView(context: Context) -> DropNSView {
+        let view = DropNSView()
+        view.onTargeted = onTargeted
+        view.onDropped = onDropped
+        view.registerForDraggedTypes([.fileURL])
+        return view
+    }
+
+    func updateNSView(_ nsView: DropNSView, context: Context) {
+        nsView.onTargeted = onTargeted
+        nsView.onDropped = onDropped
+    }
+
+    final class DropNSView: NSView {
+        var onTargeted: (Bool) -> Void = { _ in }
+        var onDropped: ([URL]) -> Void = { _ in }
+
+        override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+            onTargeted(true)
+            return .copy
+        }
+
+        override func draggingExited(_ sender: NSDraggingInfo?) {
+            onTargeted(false)
+        }
+
+        override func draggingEnded(_ sender: NSDraggingInfo) {
+            onTargeted(false)
+        }
+
+        override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+            let urls = sender.draggingPasteboard.readObjects(
+                forClasses: [NSURL.self],
+                options: [.urlReadingFileURLsOnly: true]
+            ) as? [URL] ?? []
+            guard !urls.isEmpty else { return false }
+            DispatchQueue.main.async { [onDropped] in onDropped(urls) }
             return true
         }
-        .onTapGesture { onAirDropShelf() }
-    }
-}
-
-// inputs {}, does {vector AirDrop glyph: concentric arcs with the bottom wedge cut, like Apple's icon}, returns {View}
-struct AirDropGlyph: View {
-    var body: some View {
-        GeometryReader { proxy in
-            let side = min(proxy.size.width, proxy.size.height)
-            let lineWidth = side * 0.075
-            ZStack {
-                ForEach(1..<5) { ring in
-                    Circle()
-                        .stroke(.white, lineWidth: lineWidth)
-                        .frame(width: side * CGFloat(ring) / 4, height: side * CGFloat(ring) / 4)
-                }
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .mask(BottomWedgeCutShape().fill(style: FillStyle(eoFill: true)))
-        }
-    }
-}
-
-// inputs {}, does {full rect minus a triangular wedge from center to bottom edge (even-odd fill)}, returns {Shape}
-struct BottomWedgeCutShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.addRect(rect)
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        path.move(to: center)
-        path.addLine(to: CGPoint(x: rect.midX - rect.width * 0.30, y: rect.maxY + 1))
-        path.addLine(to: CGPoint(x: rect.midX + rect.width * 0.30, y: rect.maxY + 1))
-        path.closeSubpath()
-        return path
     }
 }
 

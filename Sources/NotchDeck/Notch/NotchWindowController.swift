@@ -49,7 +49,7 @@ final class NotchWindowController {
             expandedSlop: expandedSlop,
             isDragNear: { point in
                 let frame = screen.frame
-                return point.y > frame.maxY - 130 && abs(point.x - frame.midX) < 300
+                return point.y > frame.maxY - 220 && abs(point.x - frame.midX) < 420
             }
         )
         let hosting = PassThroughHostingView(rootView: root)

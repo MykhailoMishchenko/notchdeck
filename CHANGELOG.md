@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.7.2] — 2026-07-14
+
+### Fixed
+- AirDrop drop target rebuilt on native AppKit (`registerForDraggedTypes`) — SwiftUI's `onDrop` silently never targeted the zone. The icon is the OS-provided one from `NSSharingService`, rendered as-is. "AirDrop all" moved to a paperplane button in the tray footer.
+
+### Changed
+- Launcher grid is top-aligned with the neighboring cards.
+- Drag proximity stretch triggers earlier (220 pt from the top, ±420 pt from center).
+
 ## [0.7.1] — 2026-07-14
 
 ### Fixed
