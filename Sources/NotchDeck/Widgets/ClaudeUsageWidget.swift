@@ -52,12 +52,15 @@ final class ClaudeUsageWidget: NotchWidget {
             request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
             let semaphore = DispatchSemaphore(value: 0)
             var payload: Data?
+            var statusCode = 0
             URLSession.shared.dataTask(with: request) { data, response, _ in
-                if (response as? HTTPURLResponse)?.statusCode == 200 { payload = data }
+                statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+                if statusCode == 200 { payload = data }
                 semaphore.signal()
             }.resume()
             _ = semaphore.wait(timeout: .now() + 15)
             guard let payload else {
+                if statusCode == 401 { ClaudeAuth.invalidateCache() }
                 DispatchQueue.main.async { self?.model.status = "Usage request failed — token may be expired" }
                 return
             }

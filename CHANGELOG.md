@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.9.1] — 2026-07-14
+
+### Fixed
+- Keychain consent prompt looped on every panel expand: the token is now cached in memory for the app session (still never written to disk) and the Keychain is queried at most once per launch — or again only when the token nears expiry or the API answers 401.
+
 ## [0.9.0] — 2026-07-14
 
 ### Changed

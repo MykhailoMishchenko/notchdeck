@@ -5,6 +5,10 @@ import Security
 enum ClaudeAuth {
     private static let connectedKey = "dev.notchdeck.claudeConnected"
     private static let planKey = "dev.notchdeck.claudePlan"
+    /// In-memory ONLY cache of the oauth dict — the Keychain is asked once per app launch,
+    /// not on every panel expand (each SecItemCopyMatching can raise a consent prompt).
+    private static var cachedOAuth: [String: Any]?
+    private static let cacheLock = NSLock()
 
     static var isConnected: Bool {
         UserDefaults.standard.bool(forKey: connectedKey)
@@ -19,6 +23,9 @@ enum ClaudeAuth {
         guard let credentials = readCredentials() else {
             return .failure(.notFound)
         }
+        cacheLock.lock()
+        cachedOAuth = credentials
+        cacheLock.unlock()
         let plan = (credentials["subscriptionType"] as? String ?? "unknown").capitalized
         UserDefaults.standard.set(true, forKey: connectedKey)
         UserDefaults.standard.set(plan, forKey: planKey)
@@ -32,9 +39,27 @@ enum ClaudeAuth {
         Log.info("claude: disconnected")
     }
 
-    // inputs {}, does {reads the access token on demand for one request}, returns {token or nil}
+    // inputs {}, does {returns the access token from the in-memory cache, re-reading credentials only when missing or expiring within a minute}, returns {token or nil}
     static func accessToken() -> String? {
-        readCredentials()?["accessToken"] as? String
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        if let cached = cachedOAuth, !isExpiring(cached) {
+            return cached["accessToken"] as? String
+        }
+        cachedOAuth = readCredentials()
+        return cachedOAuth?["accessToken"] as? String
+    }
+
+    // inputs {}, does {drops the cached token (call on 401 — Claude Code may have refreshed it)}, returns {}
+    static func invalidateCache() {
+        cacheLock.lock()
+        cachedOAuth = nil
+        cacheLock.unlock()
+    }
+
+    private static func isExpiring(_ oauth: [String: Any]) -> Bool {
+        guard let expiresAt = oauth["expiresAt"] as? Double else { return false }
+        return expiresAt / 1000 < Date().timeIntervalSince1970 + 60
     }
 
     enum ConnectError: Error {
