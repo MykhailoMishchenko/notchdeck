@@ -30,6 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registry.register(MediaWidget())
         registry.register(FilesShelfWidget())
         registry.register(CalendarWidget())
+        registry.register(FanWidget())
+        registry.register(ClaudeUsageWidget())
     }
 
     // inputs {}, does {diffs current screens vs controllers: tears down removed, creates added, rebuilds geometry-changed}, returns {}

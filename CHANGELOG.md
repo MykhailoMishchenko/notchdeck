@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.8.0] — 2026-07-14
+
+### Added
+- **Fans widget** (launcher square): live RPM per fan with min–max bars and CPU/GPU temperature chips, via unprivileged user-space SMC reads, 2 s poll while visible. This widget is the designated mount point for the future privileged XPC fan-control helper (protocol and integration documented in ARCHITECTURE.md Stage 4).
+- **Claude usage widget** (launcher square): the active 5-hour block from `ccusage` — cost, tokens, burn rate, projected cost and reset countdown, refreshed every 60 s. Demonstrates external-process-backed widgets.
+- "Extending NotchDeck" section in the README; Stage 4 architecture docs (XPC design, entitlements split).
+
+Both new widgets appear in Settings toggles and the launcher grid automatically — zero core changes, as designed.
+
 ## [0.7.6] — 2026-07-14
 
 ### Changed

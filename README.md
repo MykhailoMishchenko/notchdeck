@@ -42,9 +42,26 @@ swift run NotchDeck          # dev run
 - [x] 0.5.0 — Dynamic Island: album art + equalizer in the collapsed notch, artwork card, swipe-back picker
 - [x] 0.6.0 — file drag & drop: strip hint on system drags, Files Tray + AirDrop takeover zones
 - [x] 0.7.0 — launcher column, settings (widget toggles), launch at login
-- [ ] 0.8.0 — extension point for external-process widgets (XPC) + integration docs
+- [x] 0.8.0 — Fans widget (SMC monitor, XPC control mount point), Claude usage widget, extension docs
 
 Versioning: the single source of truth is the [`VERSION`](VERSION) file; releases are tagged `vX.Y.Z`, history lives in [CHANGELOG.md](CHANGELOG.md).
+
+## Extending NotchDeck
+
+A widget is one file + one registration line:
+
+```swift
+final class MyWidget: NotchWidget {
+    let id = "my"
+    let displayName = "My"
+    var expandedView: AnyView { AnyView(Text("Hi")) }   // card in the panel row
+    // or expandedWidthWeight = 0 + takeoverView -> a launcher square instead
+}
+// AppDelegate.registerWidgets():
+registry.register(MyWidget())
+```
+
+The protocol also gives you collapsed Dynamic-Island slots, poll scheduling, a live-lock, full-panel takeovers and a Settings toggle — all for free. Widgets backed by **external processes** are first-class: the Claude widget wraps a CLI, and the fan widget is the designated mount point for a future privileged XPC helper that will add fan *control* on top of today's monitoring. See [ARCHITECTURE.md](ARCHITECTURE.md), Stage 4.
 
 ## License
 

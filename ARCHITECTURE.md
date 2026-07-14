@@ -94,7 +94,26 @@ Decisions & lessons:
 - **TCC in dev runs**: the bare SPM binary embeds an Info.plist (`-sectcreate __TEXT __info_plist`) with usage descriptions so calendar/Apple Events prompts work without the .app bundle; `bundle.sh` carries the same keys.
 - `PlaceholderWidget` is kept as the minimal reference implementation of the protocol.
 
-## Build
+## Stage 4 — external-process widgets & the fan-control extension point
+
+### What ships today
+- `FanWidget` — a read-only fan/thermal monitor: user-space SMC reads (`SMC.swift`, IOKit `AppleSMC` client) need **no privileges**; per-fan RPM (`F#Ac/Mn/Mx`) and averaged M-series cluster temperatures, polled every 2 s while visible.
+- `ClaudeUsageWidget` — an example of a widget backed by an **external process**: it shells out to `ccusage` and renders the active Claude block (cost, tokens, burn rate, reset countdown). This proves the pattern: the platform neither knows nor cares where a widget's data comes from.
+
+### How fan CONTROL will plug in (future separate project)
+Writing SMC keys requires root, and the platform must stay unprivileged. The design:
+
+1. A separate **privileged helper daemon** (`dev.notchdeck.fanhelperd`) is developed and installed independently (via `SMAppService.daemon` + an embedded `launchd` plist, or `SMJobBless` on older systems). It owns all SMC **writes** and exposes a narrow `NSXPCConnection` mach service:
+   ```swift
+   @objc protocol FanControlXPC {
+       func setFanMode(_ mode: Int, reply: @escaping (Bool) -> Void)      // auto / manual
+       func setTargetRPM(fan: Int, rpm: Double, reply: @escaping (Bool) -> Void)
+   }
+   ```
+2. `FanWidget` (this repo) becomes the client: it opens `NSXPCConnection(machServiceName: "dev.notchdeck.fanhelperd", options: [])`, keeps its read-only SMC path for telemetry, and adds sliders that call the XPC protocol. If the helper is absent, the widget stays a monitor — graceful degradation, no platform changes.
+3. Entitlements stay split: the app remains un-entitled; the helper carries the privilege and validates its client's code signature before accepting commands.
+
+The takeover view, the launcher square, the poll loop and the Settings toggle for `fans` all exist already — the future project only replaces the widget's data/command layer.
 
 - SPM executable (no Xcode project); `swift run NotchDeck` for development.
 - `scripts/bundle.sh [debug|release]` — builds `NotchDeck.app` (`LSUIElement=true`, ad-hoc signed, version injected from the `VERSION` file). The bundle is required for `SMAppService` (launch at login, Stage 3.5).
