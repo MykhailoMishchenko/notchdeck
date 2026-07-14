@@ -111,8 +111,8 @@ struct FilesTakeoverView: View {
 
     private var airDropZone: some View {
         VStack(spacing: 6) {
-            AirDropIconView()
-                .frame(width: 26, height: 26)
+            AirDropGlyph()
+                .frame(width: 28, height: 28)
                 .opacity(airTargeted ? 1 : 0.85)
             Text("AirDrop")
                 .font(.caption)
@@ -121,14 +121,48 @@ struct FilesTakeoverView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color.blue.opacity(airTargeted ? 0.5 : 0.28))
+                .fill(Color.blue.opacity(airTargeted ? 0.55 : 0.28))
         )
-        .contentShape(RoundedRectangle(cornerRadius: 14))
-        .onTapGesture { onAirDropShelf() }
+        .contentShape(Rectangle())
         .onDrop(of: [.fileURL], isTargeted: $airTargeted) { providers in
+            Log.info("airdrop zone: drop received (\(providers.count) providers)")
             loadDroppedURLs(providers) { onAirDropped($0) }
             return true
         }
+        .onTapGesture { onAirDropShelf() }
+    }
+}
+
+// inputs {}, does {vector AirDrop glyph: concentric arcs with the bottom wedge cut, like Apple's icon}, returns {View}
+struct AirDropGlyph: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let side = min(proxy.size.width, proxy.size.height)
+            let lineWidth = side * 0.075
+            ZStack {
+                ForEach(1..<5) { ring in
+                    Circle()
+                        .stroke(.white, lineWidth: lineWidth)
+                        .frame(width: side * CGFloat(ring) / 4, height: side * CGFloat(ring) / 4)
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .mask(BottomWedgeCutShape().fill(style: FillStyle(eoFill: true)))
+        }
+    }
+}
+
+// inputs {}, does {full rect minus a triangular wedge from center to bottom edge (even-odd fill)}, returns {Shape}
+struct BottomWedgeCutShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addRect(rect)
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        path.move(to: center)
+        path.addLine(to: CGPoint(x: rect.midX - rect.width * 0.30, y: rect.maxY + 1))
+        path.addLine(to: CGPoint(x: rect.midX + rect.width * 0.30, y: rect.maxY + 1))
+        path.closeSubpath()
+        return path
     }
 }
 
@@ -180,25 +214,3 @@ struct FileThumbView: View {
     }
 }
 
-// inputs {}, does {Apple's real AirDrop glyph from the sharing service, template-tinted white}, returns {View}
-struct AirDropIconView: View {
-    private static let icon: NSImage? = {
-        let image = NSSharingService(named: .sendViaAirDrop)?.image
-        image?.isTemplate = true
-        return image
-    }()
-
-    var body: some View {
-        if let icon = Self.icon {
-            Image(nsImage: icon)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(.white)
-        } else {
-            Image(systemName: "dot.radiowaves.left.and.right")
-                .font(.title3)
-                .foregroundStyle(.white)
-        }
-    }
-}

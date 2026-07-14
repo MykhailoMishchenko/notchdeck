@@ -46,7 +46,11 @@ final class NotchWindowController {
             expandedSize: expandedSize,
             collapsedSlopX: collapsedSlopX,
             collapsedSlopY: collapsedSlopY,
-            expandedSlop: expandedSlop
+            expandedSlop: expandedSlop,
+            isDragNear: { point in
+                let frame = screen.frame
+                return point.y > frame.maxY - 130 && abs(point.x - frame.midX) < 300
+            }
         )
         let hosting = PassThroughHostingView(rootView: root)
         hosting.interactiveRect = { [weak self] in self?.interactiveRectInView() ?? .zero }
@@ -76,8 +80,9 @@ final class NotchWindowController {
         } else {
             width = geometry.notchWidth + geometry.topCornerRadius * 2 + collapsedSlopX * 2
                 + registry.collapsedAccessoryWidth
-                + (FileDragMonitor.shared.draggingFiles ? 40 : 0)
+                + (FileDragMonitor.shared.draggingFiles ? 60 : 0)
             height = geometry.notchHeight + collapsedSlopY
+                + (FileDragMonitor.shared.draggingFiles ? 14 : 0)
         }
         return CGRect(x: (window.frame.width - width) / 2, y: 0, width: width, height: height)
     }

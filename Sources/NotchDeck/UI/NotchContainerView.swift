@@ -86,10 +86,17 @@ struct NotchContainerView: View {
     let collapsedSlopX: CGFloat
     let collapsedSlopY: CGFloat
     let expandedSlop: CGFloat
+    /// Screen-space check from the controller: is the dragged file close to this screen's notch.
+    let isDragNear: (CGPoint) -> Bool
 
     @State private var collapsedContentWidth: CGFloat = 0
     @State private var stripDropTargeted = false
     @ObservedObject private var dragMonitor = FileDragMonitor.shared
+
+    /// File drag close to the strip: it stretches toward the cursor (wider AND taller).
+    private var dragNear: Bool {
+        dragMonitor.draggingFiles && isDragNear(dragMonitor.dragLocation)
+    }
 
     private var collapsedBaseWidth: CGFloat { geometry.notchWidth + geometry.topCornerRadius * 2 }
     private var bottomRadius: CGFloat { state.expanded ? 24 : geometry.bottomCornerRadius }
@@ -98,14 +105,14 @@ struct NotchContainerView: View {
         state.expanded ? expandedSize.width : max(collapsedBaseWidth, collapsedContentWidth)
     }
     private var currentHeight: CGFloat {
-        state.expanded ? expandedSize.height : geometry.notchHeight
+        state.expanded ? expandedSize.height : geometry.notchHeight + (dragNear ? 14 : 0)
     }
     /// Hover zone is larger than the visible shape so expansion triggers on approach.
     private var hoverWidth: CGFloat {
         state.expanded ? expandedSize.width : currentWidth + collapsedSlopX * 2
     }
     private var hoverHeight: CGFloat {
-        state.expanded ? expandedSize.height + expandedSlop : geometry.notchHeight + collapsedSlopY
+        state.expanded ? expandedSize.height + expandedSlop : currentHeight + collapsedSlopY
     }
     private var shape: NotchShape {
         NotchShape(topCornerRadius: geometry.topCornerRadius, bottomCornerRadius: bottomRadius)
@@ -139,6 +146,7 @@ struct NotchContainerView: View {
                 value: state.expanded
             )
             .animation(.spring(response: 0.30, dampingFraction: 0.80), value: collapsedContentWidth)
+            .animation(.spring(response: 0.28, dampingFraction: 0.75), value: dragNear)
             .onPreferenceChange(CollapsedWidthPreferenceKey.self) { collapsedContentWidth = $0 }
             .onChange(of: stripDropTargeted) { targeted in
                 guard targeted, !state.expanded else { return }
@@ -163,7 +171,7 @@ struct NotchContainerView: View {
                 ForEach(registry.activeWidgets, id: \.id) { widget in widget.collapsedTrailing }
             }
         }
-        .padding(.horizontal, dragMonitor.draggingFiles ? 20 : 0)
+        .padding(.horizontal, dragMonitor.draggingFiles ? (dragNear ? 30 : 20) : 0)
         .frame(height: geometry.notchHeight)
         .background(
             GeometryReader { proxy in

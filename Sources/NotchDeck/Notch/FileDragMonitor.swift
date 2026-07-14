@@ -6,6 +6,8 @@ final class FileDragMonitor: ObservableObject {
     static let shared = FileDragMonitor()
 
     @Published var draggingFiles = false
+    /// Current cursor position during a file drag (screen coords, throttled) — powers the proximity stretch.
+    @Published var dragLocation: CGPoint = .zero
     private var monitors: [Any] = []
     private var handledChangeCount = -1
 
@@ -24,15 +26,27 @@ final class FileDragMonitor: ObservableObject {
         }
     }
 
-    // inputs {}, does {marks a new drag session as file-carrying by inspecting the drag pasteboard once per changeCount}, returns {}
+    // inputs {}, does {marks a new drag session as file-carrying by inspecting the drag pasteboard once per changeCount; tracks the cursor while dragging}, returns {}
     private func checkDragPasteboard() {
+        if draggingFiles {
+            updateLocation()
+        }
         let pasteboard = NSPasteboard(name: .drag)
         guard pasteboard.changeCount != handledChangeCount else { return }
         handledChangeCount = pasteboard.changeCount
         let hasFiles = pasteboard.types?.contains(.fileURL) == true
         if hasFiles != draggingFiles {
             draggingFiles = hasFiles
+            updateLocation()
             Log.info("file drag: \(hasFiles ? "started" : "not files")")
+        }
+    }
+
+    // inputs {}, does {publishes the cursor position, throttled to ~6pt steps to keep SwiftUI churn low}, returns {}
+    private func updateLocation() {
+        let location = NSEvent.mouseLocation
+        if abs(location.x - dragLocation.x) > 6 || abs(location.y - dragLocation.y) > 6 {
+            dragLocation = location
         }
     }
 

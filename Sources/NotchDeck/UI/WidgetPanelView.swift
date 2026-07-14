@@ -8,7 +8,7 @@ struct WidgetPanelView: View {
 
     private let spacing: CGFloat = 10
 
-    private let launcherWidth: CGFloat = 40
+    private let launcherWidth: CGFloat = 70
 
     var body: some View {
         if let takeoverId = registry.takeoverId,
@@ -62,21 +62,28 @@ struct WidgetPanelView: View {
     }
 }
 
-// inputs {widgets, registry}, does {vertical column of small squares: weight-0 widgets (open their takeover) + Settings gear}, returns {View}
+// inputs {widgets, registry}, does {two-column grid of small squares: weight-0 widgets (open their takeover) + Settings gear}, returns {View}
 struct LauncherColumnView: View {
     let widgets: [NotchWidget]
     let registry: WidgetRegistry
 
+    private let columns = [
+        GridItem(.fixed(30), spacing: 6),
+        GridItem(.fixed(30), spacing: 6),
+    ]
+
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 0) {
             Spacer(minLength: 0)
-            ForEach(widgets, id: \.id) { widget in
-                LauncherSquareView(icon: widget.launcherIcon, badge: widget.launcherBadge) {
-                    registry.requestTakeover(widget.id)
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(widgets, id: \.id) { widget in
+                    LauncherSquareView(icon: widget.launcherIcon, badge: widget.launcherBadge) {
+                        registry.requestTakeover(widget.id)
+                    }
                 }
-            }
-            LauncherSquareView(icon: "gearshape", badge: nil) {
-                SettingsWindowController.shared.show(registry: registry)
+                LauncherSquareView(icon: "gearshape", badge: nil) {
+                    SettingsWindowController.shared.show(registry: registry)
+                }
             }
             Spacer(minLength: 0)
         }

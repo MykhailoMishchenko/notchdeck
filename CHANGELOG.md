@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.7.1] — 2026-07-14
+
+### Fixed
+- AirDrop zone: the glyph is now a hand-drawn vector (concentric arcs with the bottom wedge cut, like Apple's icon) instead of the fragile `NSSharingService.image` trick; drop modifiers restructured (drop target registered before the tap gesture) with diagnostics.
+
+### Changed
+- Launcher squares arranged in a two-column grid (was a single column).
+- Drag proximity stretch: when the dragged file gets close to the notch, the strip now also grows 14 pt downward and widens further — reaching toward the cursor before the panel opens.
+
 ## [0.7.0] — 2026-07-14
 
 ### Added
