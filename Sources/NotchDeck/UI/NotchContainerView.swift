@@ -7,6 +7,7 @@ final class NotchState: ObservableObject {
             guard expanded != oldValue else { return }
             Log.info("state: \(expanded ? "expanded" : "collapsed")")
             onExpandedChange(expanded)
+            expanded ? startWatchdog() : stopWatchdog()
         }
     }
     /// Set by the controller: feeds the widget registry's visibility lifecycle.
@@ -26,6 +27,30 @@ final class NotchState: ObservableObject {
         } else {
             scheduleCollapse(after: 0.10)
         }
+    }
+
+    private var watchdog: Timer?
+
+    deinit {
+        watchdog?.invalidate()
+    }
+
+    // inputs {}, does {safety net while expanded: hover exit events get swallowed by system gestures (Space switch, Mission Control), so re-check the real cursor position every 0.5s and collapse if it left the zone}, returns {}
+    private func startWatchdog() {
+        watchdog?.invalidate()
+        watchdog = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self, self.expanded else { return }
+            if !self.isCursorInZone(), !self.isCollapseBlocked() {
+                Log.info("watchdog: cursor left zone without exit event — collapsing")
+                self.expanded = false
+            }
+        }
+    }
+
+    // inputs {}, does {stops the expanded-state watchdog}, returns {}
+    private func stopWatchdog() {
+        watchdog?.invalidate()
+        watchdog = nil
     }
 
     // inputs {delay}, does {schedules a collapse attempt; aborts if cursor returned, retries later if live-locked}, returns {}

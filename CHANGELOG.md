@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.4.1] — 2026-07-14
+
+### Fixed
+- Panel stayed expanded forever after a three-finger Space switch while hovering: the system gesture swallows the hover-exit event. An expanded-state watchdog now re-checks the real cursor position every 0.5 s and collapses when the cursor left the zone (unless a widget live-lock holds it). Covers Space switches, Mission Control and similar gesture interruptions.
+
 ## [0.4.0] — 2026-07-14
 
 ### Added
