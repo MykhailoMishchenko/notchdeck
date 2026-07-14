@@ -100,6 +100,16 @@ final class NotchWindowController {
         )
     }
 
+    // inputs {}, does {softens the system's abrupt re-composite after a Space switch: fade the window in instead of popping}, returns {}
+    func fadeInAfterSpaceSwitch() {
+        window.alphaValue = 0
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.35
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            window.animator().alphaValue = 1
+        }
+    }
+
     // inputs {}, does {closes and releases the window (screen disconnected)}, returns {}
     func tearDown() {
         window.close()

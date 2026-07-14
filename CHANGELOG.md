@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.10] — 2026-07-14
+
+### Changed
+- Space switches: the strip fades in (0.35 s ease-out) instead of popping — macOS re-composites all-Spaces windows abruptly at the end of the swipe; we soften it via `activeSpaceDidChangeNotification`.
+
 ## [0.5.9] — 2026-07-14
 
 ### Fixed

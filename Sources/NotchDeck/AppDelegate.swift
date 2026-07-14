@@ -14,6 +14,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(spaceChanged),
+            name: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil
+        )
+    }
+
+    @objc private func spaceChanged() {
+        controllers.values.forEach { $0.fadeInAfterSpaceSwitch() }
     }
 
     @objc private func screensChanged() {
