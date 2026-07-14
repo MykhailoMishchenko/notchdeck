@@ -3,6 +3,12 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.7.6] — 2026-07-14
+
+### Changed
+- The tray is a true buffer now (cut semantics): dropping a file/folder MOVES it into the shelf — it leaves the source folder. The shelf lives in `~/Library/Application Support/NotchDeck/Shelf` and survives restarts (restored on launch).
+- Data safety for the only-copy model: the trash button and post-move cleanup send items to the system Trash (recoverable), never hard-delete; the shelf copy of a Finder-moved item is trashed after a 60 s grace so large folder copies can finish.
+
 ## [0.7.5] — 2026-07-14
 
 ### Changed
