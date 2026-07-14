@@ -21,6 +21,11 @@ enum ClaudeAuth {
     // inputs {}, does {user-initiated connect (Settings): verifies credentials exist and remembers the plan name — not the token}, returns {plan name or error text}
     static func connect() -> Result<String, ConnectError> {
         guard let credentials = readCredentials() else {
+            let status = lastKeychainStatus
+            // errSecItemNotFound (-25300) = genuinely no credentials; anything else = access problem.
+            if status != errSecItemNotFound && status != errSecSuccess {
+                return .failure(.keychainDenied(status))
+            }
             return .failure(.notFound)
         }
         cacheLock.lock()
@@ -64,11 +69,20 @@ enum ClaudeAuth {
 
     enum ConnectError: Error {
         case notFound
+        case keychainDenied(OSStatus)
 
         var message: String {
-            "Claude Code credentials not found on this Mac. Install and sign in to Claude Code first."
+            switch self {
+            case .notFound:
+                return "Claude Code credentials not found on this Mac. Install and sign in to Claude Code first."
+            case .keychainDenied(let status):
+                return "Keychain access was not granted (status \(status)). Click Connect again and choose Allow on the Keychain prompt."
+            }
         }
     }
+
+    /// OSStatus of the most recent Keychain lookup (for distinguishing "denied" from "absent").
+    private(set) static var lastKeychainStatus: OSStatus = errSecSuccess
 
     // inputs {}, does {parses claudeAiOauth from ~/.claude/.credentials.json, falling back to the Claude Code Keychain item (the read triggers the standard macOS consent prompt — that IS the connect confirmation)}, returns {oauth dict or nil}
     private static func readCredentials() -> [String: Any]? {
@@ -83,8 +97,12 @@ enum ClaudeAuth {
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
         var result: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else { return nil }
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        lastKeychainStatus = status
+        if status != errSecSuccess {
+            Log.info("claude: keychain read status=\(status)")
+        }
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
         return parseOAuth(data)
     }
 

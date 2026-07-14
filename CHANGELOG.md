@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.11.3] — 2026-07-14
+
+### Changed
+- Claude Connect errors now tell the truth: "credentials not found" (no Keychain item) vs "Keychain access was not granted (status N)" with the OSStatus logged — a rebuild-triggered consent re-prompt no longer reads as missing credentials.
+
 ## [0.11.2] — 2026-07-14
 
 ### Fixed
