@@ -7,7 +7,7 @@ enum Log {
 
     // inputs {message}, does {logs info-level event}, returns {}
     static func info(_ message: String) {
-        logger.info("\(message, privacy: .public)")
+        logger.notice("\(message, privacy: .public)")
         print("[NotchDeck] \(message)")
         fflush(stdout)
     }

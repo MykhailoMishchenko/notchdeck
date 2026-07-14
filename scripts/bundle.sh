@@ -44,5 +44,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-codesign --force --sign - "$APP" >/dev/null 2>&1 || true
+# CODESIGN_IDENTITY: set to a stable identity (e.g. "Apple Development: ...") so TCC grants
+# survive rebuilds; ad-hoc ("-") re-signs every build and macOS re-prompts for calendar access.
+codesign --force --sign "${CODESIGN_IDENTITY:--}" "$APP" >/dev/null 2>&1 || true
 echo "$APP"

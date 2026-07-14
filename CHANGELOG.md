@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.3.1] — 2026-07-14
+
+### Changed
+- Calendar card redesigned: clock/date removed; shows up to 3 upcoming events for the rest of the day, each with its calendar's color bar (as in Calendar.app).
+
+### Fixed
+- Calendar TCC flow: prompts only appear for a LaunchServices-launched bundle, and ad-hoc re-signing invalidates the grant on every rebuild — documented; `bundle.sh` now honors `CODESIGN_IDENTITY` for a stable signature.
+- Dev logging: unified-log messages upgraded to notice level so they persist for `log show`.
+
 ## [0.3.0] — 2026-07-14
 
 ### Added
