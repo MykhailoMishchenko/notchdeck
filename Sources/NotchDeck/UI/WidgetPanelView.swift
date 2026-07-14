@@ -9,6 +9,15 @@ struct WidgetPanelView: View {
     private let spacing: CGFloat = 10
 
     var body: some View {
+        if let takeoverId = registry.takeoverId,
+           let widget = registry.widgets.first(where: { $0.id == takeoverId }) {
+            widget.takeoverView
+        } else {
+            cardRow
+        }
+    }
+
+    private var cardRow: some View {
         GeometryReader { proxy in
             let totalWeight = max(1, registry.widgets.map(\.expandedWidthWeight).reduce(0, +))
             let available = proxy.size.width - spacing * CGFloat(max(0, registry.widgets.count - 1))

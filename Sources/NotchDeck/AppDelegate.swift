@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerWidgets()
         rebuildControllers()
+        FileDragMonitor.shared.start()
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(screensChanged),

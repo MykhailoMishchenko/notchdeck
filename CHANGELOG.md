@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.6.0] — 2026-07-14
+
+### Added
+- **File drag & drop flow** (NotchNook-style): a system-wide file drag makes the collapsed strip widen as a "drop here" hint (global mouse monitor + drag pasteboard, no extra permissions); dragging into the strip expands the panel straight into a two-zone takeover — dashed **Files Tray** (left, drops go to the temp shelf) and blue **AirDrop** (right, drops AirDrop immediately). Clicking the AirDrop zone shares the current shelf.
+- **Takeover** as a platform capability: `takeoverView` + `acceptsFileDrops` + `attach(host:)` in the widget protocol; any widget can hold the full panel via the `WidgetHost` handle. Takeover resets when the panel collapses.
+
+### Changed
+- The "Drop files here" card is gone: replaced by a compact **Tray** card (icon + file-count badge, 0.7× width) that opens the same two-zone view on click.
+
 ## [0.5.12] — 2026-07-14
 
 ### Changed

@@ -72,7 +72,11 @@ Everything except `id`, `displayName`, `expandedView` has a default via a protoc
 - **Live-lock**: `holdsExpanded` is *pulled* at collapse-decision time. If any visible widget holds, the collapse attempt re-schedules itself every 1 s until released (or until the cursor returns). Pull keeps the protocol passive — no callback plumbing into widgets. This is the temperature-sensor case: the panel stays open while a live reading is being rendered.
 
 ### Panel UI
-- `WidgetPanelView` is the only view that knows about the registry; `WidgetCardView` provides uniform card chrome around each widget's `expandedView`.
+- `WidgetPanelView` is the only view that knows about the registry; `WidgetCardView` provides uniform card chrome around each widget's `expandedView`, clipped so a widget can never paint over its neighbor.
+
+### Takeover & file-drag routing
+- A widget can hold the FULL panel: `takeoverView` renders instead of the card row while `registry.takeoverId` points at it. Widgets enter/exit via the `WidgetHost` handle received in `attach(host:)` (the registry conforms). Takeover resets when the last panel collapses.
+- System file drags: `FileDragMonitor` (global mouse monitor + drag-pasteboard type check, no permissions needed) widens the collapsed strip as a hint; a drag entering the strip expands the panel straight into the takeover of the first widget with `acceptsFileDrops == true`. The platform never names a concrete widget.
 
 ## Stage 3 — MVP widgets (implemented)
 

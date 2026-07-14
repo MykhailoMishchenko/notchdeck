@@ -88,6 +88,8 @@ struct NotchContainerView: View {
     let expandedSlop: CGFloat
 
     @State private var collapsedContentWidth: CGFloat = 0
+    @State private var stripDropTargeted = false
+    @ObservedObject private var dragMonitor = FileDragMonitor.shared
 
     private var collapsedBaseWidth: CGFloat { geometry.notchWidth + geometry.topCornerRadius * 2 }
     private var bottomRadius: CGFloat { state.expanded ? 24 : geometry.bottomCornerRadius }
@@ -138,12 +140,19 @@ struct NotchContainerView: View {
             )
             .animation(.spring(response: 0.30, dampingFraction: 0.80), value: collapsedContentWidth)
             .onPreferenceChange(CollapsedWidthPreferenceKey.self) { collapsedContentWidth = $0 }
+            .onChange(of: stripDropTargeted) { targeted in
+                guard targeted, !state.expanded else { return }
+                registry.beginFileDropTakeover()
+                state.expanded = true
+            }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
     /// The cutout gap stays fixed; widget slot views sit beside it and stretch the black shape when active.
+    /// During a system file drag the strip widens as a "you can drop here" hint, and a drag entering it
+    /// expands the panel straight into the file-drop takeover.
     private var collapsedStrip: some View {
         HStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -154,11 +163,13 @@ struct NotchContainerView: View {
                 ForEach(registry.widgets, id: \.id) { widget in widget.collapsedTrailing }
             }
         }
+        .padding(.horizontal, dragMonitor.draggingFiles ? 20 : 0)
         .frame(height: geometry.notchHeight)
         .background(
             GeometryReader { proxy in
                 Color.clear.preference(key: CollapsedWidthPreferenceKey.self, value: proxy.size.width)
             }
         )
+        .onDrop(of: [.fileURL], isTargeted: $stripDropTargeted) { _ in false }
     }
 }

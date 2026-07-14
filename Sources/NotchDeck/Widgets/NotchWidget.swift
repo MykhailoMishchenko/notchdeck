@@ -1,5 +1,11 @@
 import SwiftUI
 
+// inputs {}, does {platform handle given to widgets: enter/exit full-panel takeover}, returns {protocol}
+protocol WidgetHost: AnyObject {
+    func requestTakeover(_ widgetId: String)
+    func endTakeover()
+}
+
 // inputs {}, does {contract every widget implements to plug into the platform — no core changes needed to add one}, returns {protocol}
 protocol NotchWidget: AnyObject {
     /// Stable unique id; used for order persistence and settings.
@@ -15,6 +21,12 @@ protocol NotchWidget: AnyObject {
     var collapsedAccessoryWidth: CGFloat { get }
     /// Relative width of the widget's card in the expanded panel (1 = equal share).
     var expandedWidthWeight: CGFloat { get }
+    /// Full-panel view shown while this widget holds the takeover (see WidgetHost).
+    var takeoverView: AnyView { get }
+    /// True = the platform routes system file drags to this widget's takeover.
+    var acceptsFileDrops: Bool { get }
+    /// Called once at registration with the platform handle.
+    func attach(host: WidgetHost)
     /// Shown as a card inside the expanded panel.
     var expandedView: AnyView { get }
     /// nil = push-based (widget publishes its own updates); otherwise the platform
@@ -37,6 +49,9 @@ extension NotchWidget {
     var collapsedTrailing: AnyView { AnyView(EmptyView()) }
     var collapsedAccessoryWidth: CGFloat { 0 }
     var expandedWidthWeight: CGFloat { 1 }
+    var takeoverView: AnyView { AnyView(EmptyView()) }
+    var acceptsFileDrops: Bool { false }
+    func attach(host: WidgetHost) {}
     var updateInterval: TimeInterval? { nil }
     var holdsExpanded: Bool { false }
     func refresh() {}

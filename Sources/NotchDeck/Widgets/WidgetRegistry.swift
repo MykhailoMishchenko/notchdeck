@@ -1,9 +1,11 @@
 import Foundation
 import Combine
 
-// inputs {}, does {single registration point for widgets: display order + persistence, visibility lifecycle, poll timers, live-lock aggregation}, returns {observable registry}
-final class WidgetRegistry: ObservableObject {
+// inputs {}, does {single registration point for widgets: display order + persistence, visibility lifecycle, poll timers, live-lock aggregation, takeover host}, returns {observable registry}
+final class WidgetRegistry: ObservableObject, WidgetHost {
     @Published private(set) var widgets: [NotchWidget] = []
+    /// Widget currently holding the full panel (nil = normal card row).
+    @Published var takeoverId: String?
 
     private let orderKey = "dev.notchdeck.widgetOrder"
     private var pollTimers: [String: Timer] = [:]
@@ -16,6 +18,7 @@ final class WidgetRegistry: ObservableObject {
             return
         }
         widgets.append(widget)
+        widget.attach(host: self)
         applyPersistedOrder()
         Log.info("widget registered: \(widget.id)")
     }
@@ -50,13 +53,20 @@ final class WidgetRegistry: ObservableObject {
         }
     }
 
-    // inputs {}, does {a panel collapsed; when none remain visible stops polling + widget lifecycle}, returns {}
+    // inputs {}, does {a panel collapsed; when none remain visible stops polling + widget lifecycle and resets takeover}, returns {}
     func panelDidCollapse() {
         visiblePanels = max(0, visiblePanels - 1)
         guard visiblePanels == 0 else { return }
         pollTimers.values.forEach { $0.invalidate() }
         pollTimers.removeAll()
         widgets.forEach { $0.onDisappear() }
+        takeoverId = nil
+    }
+
+    // inputs {}, does {a system file drag entered the strip: hand the panel to the file-accepting widget}, returns {}
+    func beginFileDropTakeover() {
+        guard takeoverId == nil else { return }
+        takeoverId = widgets.first { $0.acceptsFileDrops }?.id
     }
 
     // inputs {widget}, does {starts the poll timer for a poll-based widget}, returns {}
@@ -65,6 +75,15 @@ final class WidgetRegistry: ObservableObject {
         pollTimers[widget.id] = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak widget] _ in
             widget?.refresh()
         }
+    }
+
+    // inputs {widgetId}, does {WidgetHost: enter/exit full-panel takeover}, returns {}
+    func requestTakeover(_ widgetId: String) {
+        takeoverId = widgetId
+    }
+
+    func endTakeover() {
+        takeoverId = nil
     }
 
     // inputs {}, does {saves current widget id order to UserDefaults}, returns {}

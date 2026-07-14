@@ -40,8 +40,9 @@ swift run NotchDeck          # dev run
 - [x] 0.3.0 — widgets: media controls, files shelf (drag & drop + AirDrop), calendar
 - [x] 0.4.0 — Apple Music playlist picker in the media widget
 - [x] 0.5.0 — Dynamic Island: album art + equalizer in the collapsed notch, artwork card, swipe-back picker
-- [ ] 0.6.0 — settings: widget toggles, launch at login
-- [ ] 0.7.0 — extension point for external-process widgets (XPC) + integration docs
+- [x] 0.6.0 — file drag & drop: strip hint on system drags, Files Tray + AirDrop takeover zones
+- [ ] 0.7.0 — settings: widget toggles, launch at login
+- [ ] 0.8.0 — extension point for external-process widgets (XPC) + integration docs
 
 Versioning: the single source of truth is the [`VERSION`](VERSION) file; releases are tagged `vX.Y.Z`, history lives in [CHANGELOG.md](CHANGELOG.md).
 

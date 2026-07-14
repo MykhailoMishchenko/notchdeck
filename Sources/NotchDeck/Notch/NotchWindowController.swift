@@ -76,6 +76,7 @@ final class NotchWindowController {
         } else {
             width = geometry.notchWidth + geometry.topCornerRadius * 2 + collapsedSlopX * 2
                 + registry.collapsedAccessoryWidth
+                + (FileDragMonitor.shared.draggingFiles ? 40 : 0)
             height = geometry.notchHeight + collapsedSlopY
         }
         return CGRect(x: (window.frame.width - width) / 2, y: 0, width: width, height: height)
