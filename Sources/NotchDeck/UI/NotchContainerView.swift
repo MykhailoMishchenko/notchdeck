@@ -212,6 +212,10 @@ struct NotchContainerView: View {
             )
         }
         .padding(.horizontal, dragMonitor.draggingFiles ? 20 : 0)
+        // Never let the strip compress: compressible content (island TEXT, e.g. the timer) would be
+        // squeezed to fit the OLD width, the measurement would record the squeezed size, and the
+        // island would never grow ("25 м…" / vanishing labels). fixedSize keeps measurement honest.
+        .fixedSize(horizontal: true, vertical: false)
         .frame(height: geometry.notchHeight)
         .background(
             GeometryReader { proxy in

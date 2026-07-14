@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.11.2] — 2026-07-14
+
+### Fixed
+- Island labels (timer's "25 мин") truncated or vanished, reappearing only after a screen switch: SwiftUI compressed the text to fit the strip's OLD width before measurement, so the island never grew to its honest size. The strip is now `fixedSize` — it can't compress, measurement is always natural.
+
 ## [0.11.1] — 2026-07-14
 
 ### Added
