@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.11] — 2026-07-14
+
+### Fixed
+- Space-switch fade blinked when the window was already composited: the fade now runs only when the window is genuinely not visible yet (occlusion-state guard).
+
 ## [0.5.10] — 2026-07-14
 
 ### Changed
