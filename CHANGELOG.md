@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.7] — 2026-07-14
+
+### Changed
+- Removed the playlist icon from the top-right corner of the now-playing card; the picker remains reachable from the idle state.
+
 ## [0.5.6] — 2026-07-14
 
 ### Fixed

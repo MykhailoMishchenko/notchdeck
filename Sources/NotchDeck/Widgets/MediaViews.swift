@@ -108,15 +108,6 @@ struct MediaCardView: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .overlay(alignment: .topTrailing) {
-            Button(action: onTogglePicker) {
-                Image(systemName: "music.note.list")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            .buttonStyle(.plain)
-            .padding(6)
-        }
     }
 
     private var artworkThumb: some View {
