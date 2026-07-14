@@ -3,6 +3,11 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.5.5] — 2026-07-14
+
+### Changed
+- Player card matched to the reference precisely: 96 pt cover with larger rounding and badge, bold title, flat transport glyphs (skip-style icons, no circular chrome) under the text.
+
 ## [0.5.4] — 2026-07-14
 
 ### Fixed
