@@ -1,9 +1,11 @@
 import SwiftUI
 
-// inputs {}, does {platform handle given to widgets: enter/exit full-panel takeover}, returns {protocol}
+// inputs {}, does {platform handle given to widgets: enter/exit full-panel takeover, peek at island occupancy}, returns {protocol}
 protocol WidgetHost: AnyObject {
     func requestTakeover(_ widgetId: String)
     func endTakeover()
+    /// Total collapsed-slot width other widgets currently occupy (for "island is idle" checks).
+    func collapsedAccessoryWidthExcluding(_ widgetId: String) -> CGFloat
 }
 
 // inputs {}, does {contract every widget implements to plug into the platform — no core changes needed to add one}, returns {protocol}

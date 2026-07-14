@@ -13,7 +13,23 @@ struct WidgetPanelView: View {
     var body: some View {
         if let takeoverId = registry.takeoverId,
            let widget = registry.activeWidgets.first(where: { $0.id == takeoverId }) {
+            // Platform-provided exit for EVERY takeover: back chevron + right-swipe.
             widget.takeoverView
+                .overlay(alignment: .topLeading) {
+                    Button { registry.endTakeover() } label: {
+                        Image(systemName: "chevron.backward.circle.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(2)
+                }
+                .gesture(
+                    DragGesture(minimumDistance: 15)
+                        .onEnded { value in
+                            if value.translation.width > 40 { registry.endTakeover() }
+                        }
+                )
         } else {
             cardRow
         }

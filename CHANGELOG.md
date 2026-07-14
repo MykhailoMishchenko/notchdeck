@@ -3,6 +3,15 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 Every feature release: bump `VERSION`, add an entry here, tag `vX.Y.Z`.
 
+## [0.10.0] — 2026-07-14
+
+### Added
+- **Timer widget**: preset chips (5–60 min), big countdown, start/pause/reset. While active, the island shows an orange progress ring left of the cutout and the remaining time right of it ("27 мин" / "45 с"), iOS style; "Glass" chime + «Готово» on finish, auto-clears after 15 s. The timer keeps ticking with the panel closed.
+- **The crab easter egg**: when the island is idle (no music, no timer), Claude's pixel crab occasionally pushes the island wall outward, waves at you, then dashes off kicking up dust. Runs every 2.5–5 minutes; steps aside whenever any widget occupies the island (via the new `WidgetHost.collapsedAccessoryWidthExcluding`).
+
+### Fixed
+- Back navigation (chevron + right-swipe) is now provided by the platform for EVERY takeover — Fans and Claude limits included, not just the tray.
+
 ## [0.9.1] — 2026-07-14
 
 ### Fixed

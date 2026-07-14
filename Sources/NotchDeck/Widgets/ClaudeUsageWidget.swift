@@ -23,7 +23,31 @@ final class ClaudeUsageWidget: NotchWidget {
     let updateInterval: TimeInterval? = 60
 
     private let model = ClaudeUsageModel()
+    private let crab = CrabAnimationModel()
     private var fetching = false
+    private weak var host: WidgetHost?
+    private var crabTimer: Timer?
+
+    init() {
+        scheduleCrab(after: 45)
+    }
+
+    func attach(host: WidgetHost) {
+        self.host = host
+    }
+
+    // inputs {delay}, does {every few minutes, if the island is idle (no music/timer accessories), lets the crab run out and wave}, returns {}
+    private func scheduleCrab(after delay: TimeInterval) {
+        crabTimer?.invalidate()
+        crabTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            let islandBusy = (self.host?.collapsedAccessoryWidthExcluding(self.id) ?? 0) > 0
+            if !islandBusy {
+                self.crab.play()
+            }
+            self.scheduleCrab(after: TimeInterval(Int.random(in: 150...300)))
+        }
+    }
 
     var expandedWidthWeight: CGFloat { 0 }
     var launcherIcon: String { "sparkles" }
@@ -34,6 +58,9 @@ final class ClaudeUsageWidget: NotchWidget {
     var takeoverView: AnyView {
         AnyView(ClaudeUsageTakeoverView(model: model))
     }
+
+    var collapsedTrailing: AnyView { AnyView(CrabRunView(model: crab)) }
+    var collapsedAccessoryWidth: CGFloat { crab.slotWidth }
 
     // inputs {}, does {poll tick: reads the token on demand (never stored) and fetches /api/oauth/usage off-main}, returns {}
     func refresh() {
@@ -182,44 +209,5 @@ struct ClaudeUsageTakeoverView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-// inputs {}, does {Claude's pixel crab mascot in brand orange (shown until connected)}, returns {View}
-struct ClaudePixelCrabView: View {
-    private static let orange = Color(red: 0.85, green: 0.47, blue: 0.34)
-    // 14 x 9 pixel grid: 0 empty, 1 body, 2 eye
-    private static let grid: [[Int]] = [
-        [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-        [0, 0, 1, 1, 2, 1, 1, 1, 1, 2, 1, 1, 0, 0],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0],
-        [0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0],
-    ]
-
-    var body: some View {
-        GeometryReader { proxy in
-            let grid = Self.grid
-            let cell = min(proxy.size.width / CGFloat(grid[0].count), proxy.size.height / CGFloat(grid.count))
-            let xOffset = (proxy.size.width - cell * CGFloat(grid[0].count)) / 2
-            Canvas { context, _ in
-                for (rowIndex, row) in grid.enumerated() {
-                    for (columnIndex, value) in row.enumerated() where value == 1 {
-                        context.fill(
-                            Path(CGRect(
-                                x: xOffset + CGFloat(columnIndex) * cell,
-                                y: CGFloat(rowIndex) * cell,
-                                width: cell,
-                                height: cell
-                            )),
-                            with: .color(Self.orange)
-                        )
-                    }
-                }
-            }
-        }
     }
 }

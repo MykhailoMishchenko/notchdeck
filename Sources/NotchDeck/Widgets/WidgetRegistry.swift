@@ -119,6 +119,11 @@ final class WidgetRegistry: ObservableObject, WidgetHost {
         takeoverId = nil
     }
 
+    // inputs {widgetId}, does {WidgetHost: island occupancy by everyone except the caller}, returns {width}
+    func collapsedAccessoryWidthExcluding(_ widgetId: String) -> CGFloat {
+        activeWidgets.filter { $0.id != widgetId }.map(\.collapsedAccessoryWidth).reduce(0, +)
+    }
+
     // inputs {}, does {saves current widget id order to UserDefaults}, returns {}
     private func persistOrder() {
         UserDefaults.standard.set(widgets.map(\.id), forKey: orderKey)

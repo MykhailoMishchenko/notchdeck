@@ -33,22 +33,8 @@ struct FilesTakeoverView: View {
     @State private var trayTargeted = false
 
     var body: some View {
+        // Back navigation (chevron + swipe) is provided by the platform takeover wrapper.
         trayZone
-            .overlay(alignment: .topLeading) {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.backward.circle.fill")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.45))
-                }
-                .buttonStyle(.plain)
-                .padding(2)
-            }
-            .gesture(
-                DragGesture(minimumDistance: 15)
-                    .onEnded { value in
-                        if value.translation.width > 40 { onBack() }
-                    }
-            )
     }
 
     private var trayZone: some View {
