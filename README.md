@@ -24,10 +24,11 @@
 ## Install
 
 1. Download `NotchDeck-<version>.dmg` from [Releases](https://github.com/MykhailoMishchenko/notchdeck/releases), open it and drag **NotchDeck** to **Applications**.
-2. The build is not notarized yet — on first run macOS will complain. Either right-click → Open → Open, or:
+2. The build is not notarized yet, so Gatekeeper will refuse the first launch ("Apple could not verify…"). Clear the quarantine flag:
    ```bash
    xattr -d com.apple.quarantine /Applications/NotchDeck.app
    ```
+   or go to System Settings → Privacy & Security and click **Open Anyway** (the old right-click → Open trick no longer works on macOS 15+).
 3. Grant what you use: Calendar access (calendar widget), Apple Events (media controls), Keychain read (Claude limits — Connect in Settings), and approve the fan helper in System Settings → Login Items (fan control — Enable in Settings).
 
 ## Build from source
